@@ -696,6 +696,22 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   <div class="login-hint" id="login-hint"></div>
 </div>
 
+<!-- ── Admin Setup Screen (first time only) ── -->
+<div id="admin-setup-screen" style="display:none;">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:24px;background:linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);">
+    <div class="login-logo">&#9968;</div>
+    <div class="login-title">Ski27 Setup</div>
+    <div class="login-subtitle">Create your admin account to get started</div>
+    <div class="login-box">
+      <input type="password" id="admin-setup-password" placeholder="Choose admin password" autocomplete="new-password">
+      <input type="password" id="admin-setup-confirm" placeholder="Confirm admin password" autocomplete="new-password" style="margin-top:8px;">
+      <button onclick="setupAdmin()">Create Admin Account</button>
+      <div class="login-error" id="admin-setup-error"></div>
+    </div>
+    <div class="login-hint">This password gives you admin access to manage the group.</div>
+  </div>
+</div>
+
 <!-- ── Main App ── -->
 <div id="app">
   <header class="app-header">
@@ -849,7 +865,24 @@ textarea.form-input { resize: vertical; min-height: 60px; }
       <div class="section-title">Settings</div>
 
       <div class="settings-section" id="password-section" style="display:none;">
-        <h3>Group Password (Admin Only)</h3>
+        <h3>Admin Password</h3>
+        <div class="card">
+          <div class="form-group">
+            <label>Current Admin Password</label>
+            <input class="form-input" type="password" id="current-admin-password" placeholder="Enter current password">
+          </div>
+          <div class="form-group">
+            <label>New Admin Password</label>
+            <input class="form-input" type="password" id="new-admin-password" placeholder="Enter new password">
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input class="form-input" type="password" id="confirm-admin-password" placeholder="Confirm new password">
+          </div>
+          <button class="btn btn-primary btn-block" onclick="changeAdminPassword()">Update Admin Password</button>
+        </div>
+
+        <h3 style="margin-top:16px;">Group Password</h3>
         <div class="card">
           <div class="form-group">
             <label>Set or Change Group Password</label>
@@ -1028,6 +1061,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const dataRef = db.ref('ski27');
 const passwordRef = db.ref('ski27_password');
+const adminPasswordRef = db.ref('ski27_admin_password');
 
 // ── State ──
 const SESSION_KEY = 'ski27_session';
@@ -1119,11 +1153,13 @@ function startRealtimeSync() {
 }
 
 // ── Password ──
-const ADMIN_PASSWORD = 'jd0209';
+let cachedAdminHash = null; // hashed admin password from Firebase
 let cachedPassword = null; // group password for regular users
 
-function getPassword() {
-  return cachedPassword;
+async function hashPassword(pw) {
+  const encoded = new TextEncoder().encode(pw);
+  const buffer = await crypto.subtle.digest('SHA-256', encoded);
+  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function setPassword(pw) {
@@ -1131,20 +1167,23 @@ function setPassword(pw) {
   passwordRef.set(pw);
 }
 
-function attemptLogin() {
+async function attemptLogin() {
   const input = document.getElementById('password-input');
   const error = document.getElementById('login-error');
   const pw = input.value.trim();
 
   if (!pw) { error.textContent = 'Please enter a password'; return; }
 
-  if (pw === ADMIN_PASSWORD) {
-    // Admin login
-    isAdmin = true;
-    updateAdminUI();
-    sessionStorage.setItem(SESSION_KEY, 'admin');
-    showApp();
-    return;
+  // Check admin password
+  if (cachedAdminHash) {
+    const inputHash = await hashPassword(pw);
+    if (inputHash === cachedAdminHash) {
+      isAdmin = true;
+      updateAdminUI();
+      sessionStorage.setItem(SESSION_KEY, 'admin');
+      showApp();
+      return;
+    }
   }
 
   if (!cachedPassword) {
@@ -1167,6 +1206,29 @@ function attemptLogin() {
   }
 }
 
+async function setupAdmin() {
+  const input = document.getElementById('admin-setup-password');
+  const confirm_input = document.getElementById('admin-setup-confirm');
+  const error = document.getElementById('admin-setup-error');
+  const pw = input.value.trim();
+  const confirmPw = confirm_input.value.trim();
+
+  if (!pw) { error.textContent = 'Please enter a password'; return; }
+  if (pw.length < 4) { error.textContent = 'Password must be at least 4 characters'; return; }
+  if (pw !== confirmPw) { error.textContent = 'Passwords do not match'; return; }
+
+  const hashed = await hashPassword(pw);
+  await adminPasswordRef.set(hashed);
+  cachedAdminHash = hashed;
+
+  // Log in as admin immediately
+  isAdmin = true;
+  updateAdminUI();
+  sessionStorage.setItem(SESSION_KEY, 'admin');
+  document.getElementById('admin-setup-screen').style.display = 'none';
+  showApp();
+}
+
 function logout() {
   sessionStorage.removeItem(SESSION_KEY);
   isAdmin = false;
@@ -1176,15 +1238,49 @@ function logout() {
   document.getElementById('login-error').textContent = '';
 }
 
-function changePassword() {
+async function changePassword() {
   if (!isAdmin) { alert('Only the group admin can change the password.'); return; }
   const pw = document.getElementById('new-password').value.trim();
   if (!pw) return;
-  if (pw === ADMIN_PASSWORD) { alert('Group password cannot be the same as the admin password.'); return; }
+
+  // Prevent setting group password to same as admin password
+  const pwHash = await hashPassword(pw);
+  if (pwHash === cachedAdminHash) {
+    alert('Group password cannot be the same as the admin password.');
+    return;
+  }
+
   if (!confirm('This will log out all regular users. Continue?')) return;
   setPassword(pw);
   document.getElementById('new-password').value = '';
   alert('Group password updated! Members will need to re-enter the new password.');
+}
+
+async function changeAdminPassword() {
+  if (!isAdmin) { alert('Only the admin can change this password.'); return; }
+  const currentPw = document.getElementById('current-admin-password').value.trim();
+  const newPw = document.getElementById('new-admin-password').value.trim();
+  const confirmPw = document.getElementById('confirm-admin-password').value.trim();
+
+  if (!currentPw) { alert('Please enter your current password.'); return; }
+  if (!newPw) { alert('Please enter a new password.'); return; }
+  if (newPw.length < 4) { alert('New password must be at least 4 characters.'); return; }
+  if (newPw !== confirmPw) { alert('New passwords do not match.'); return; }
+
+  const currentHash = await hashPassword(currentPw);
+  if (currentHash !== cachedAdminHash) {
+    alert('Current password is incorrect.');
+    return;
+  }
+
+  const newHash = await hashPassword(newPw);
+  await adminPasswordRef.set(newHash);
+  cachedAdminHash = newHash;
+
+  document.getElementById('current-admin-password').value = '';
+  document.getElementById('new-admin-password').value = '';
+  document.getElementById('confirm-admin-password').value = '';
+  alert('Admin password updated successfully!');
 }
 
 function updateAdminUI() {
@@ -1199,11 +1295,22 @@ function showApp() {
 }
 
 function init() {
-  // Load password and set up the app
-  passwordRef.once('value')
-    .then(pwSnapshot => {
+  // Load both passwords from Firebase
+  Promise.all([
+    adminPasswordRef.once('value'),
+    passwordRef.once('value')
+  ])
+    .then(([adminSnapshot, pwSnapshot]) => {
+      cachedAdminHash = adminSnapshot.val();
       cachedPassword = pwSnapshot.val();
       const sessionType = sessionStorage.getItem(SESSION_KEY);
+
+      // If no admin password exists, show setup screen
+      if (!cachedAdminHash) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('admin-setup-screen').style.display = '';
+        return;
+      }
 
       // Restore admin status from session
       isAdmin = (sessionType === 'admin');
@@ -1225,13 +1332,19 @@ function init() {
     });
 
   // Listen for password changes in real time
+  adminPasswordRef.on('value', snapshot => {
+    cachedAdminHash = snapshot.val();
+  });
   passwordRef.on('value', snapshot => {
     cachedPassword = snapshot.val();
   });
 
-  // Allow enter key on password input
+  // Allow enter key on password inputs
   document.getElementById('password-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') attemptLogin();
+  });
+  document.getElementById('admin-setup-confirm').addEventListener('keydown', e => {
+    if (e.key === 'Enter') setupAdmin();
   });
 
   // Allow enter key on packing input
