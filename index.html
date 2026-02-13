@@ -1219,7 +1219,14 @@ function init() {
       cachedPassword = pwSnapshot.val();
       const adminUid = adminSnapshot.val();
       const user = auth.currentUser;
-      isAdmin = user && adminUid && user.uid === adminUid;
+
+      // If no admin exists yet and there's a valid session, claim admin
+      if (!adminUid && user && cachedPassword && sessionStorage.getItem(SESSION_KEY)) {
+        adminRef.set(user.uid);
+        isAdmin = true;
+      } else {
+        isAdmin = !!(user && adminUid && user.uid === adminUid);
+      }
       updateAdminUI();
 
       const hint = document.getElementById('login-hint');
