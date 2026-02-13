@@ -1254,26 +1254,28 @@ function init() {
         });
     };
 
+    const startListenersAndAuth = () => {
+      // Start realtime password listener only after auth is ready
+      passwordRef.on('value', snapshot => {
+        cachedPassword = snapshot.val();
+      });
+      return afterAuth();
+    };
+
+    const handleError = (err) => {
+      console.error('Auth failed:', err);
+      document.getElementById('login-error').textContent = 'Connection error. Please refresh.';
+    };
+
     if (user) {
       // Already signed in — reuse existing session (preserves UID)
-      afterAuth().catch(err => {
-        console.error('Auth failed:', err);
-        document.getElementById('login-error').textContent = 'Connection error. Please refresh.';
-      });
+      startListenersAndAuth().catch(handleError);
     } else {
       // No existing session — sign in anonymously
       auth.signInAnonymously()
-        .then(() => afterAuth())
-        .catch(err => {
-          console.error('Auth failed:', err);
-          document.getElementById('login-error').textContent = 'Connection error. Please refresh.';
-        });
+        .then(() => startListenersAndAuth())
+        .catch(handleError);
     }
-  });
-
-  // Also listen for password changes in real time
-  passwordRef.on('value', snapshot => {
-    cachedPassword = snapshot.val();
   });
 
   // Allow enter key on password input
