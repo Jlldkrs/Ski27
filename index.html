@@ -1319,8 +1319,22 @@ function init() {
       passwordRef.once('value')
     ]))
     .then(([adminSnapshot, pwSnapshot]) => {
-      cachedAdminHash = adminSnapshot.val();
-      cachedPasswordHash = pwSnapshot.val();
+      const isHash = v => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v);
+      let adminVal = adminSnapshot.val();
+      let pwVal = pwSnapshot.val();
+
+      // Migrate legacy plaintext passwords: clear them so users re-set as hashes
+      if (adminVal && !isHash(adminVal)) {
+        adminPasswordRef.set(null);
+        adminVal = null;
+      }
+      if (pwVal && !isHash(pwVal)) {
+        passwordRef.set(null);
+        pwVal = null;
+      }
+
+      cachedAdminHash = adminVal;
+      cachedPasswordHash = pwVal;
       const sessionType = sessionStorage.getItem(SESSION_KEY);
 
       // If no admin password exists, show setup screen
