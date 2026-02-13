@@ -1063,8 +1063,17 @@ let data = getDefaultData();
 let firebaseReady = false;
 
 // ── Persistence (Firebase) ──
+let isSaving = false;
+
 function save() {
-  dataRef.set(data);
+  isSaving = true;
+  dataRef.set(data)
+    .then(() => { isSaving = false; })
+    .catch(err => {
+      isSaving = false;
+      console.error('Firebase save failed:', err);
+      alert('Failed to save — check your internet connection.\n' + err.message);
+    });
 }
 
 // Firebase converts arrays to objects with numeric keys — convert them back
@@ -1074,8 +1083,16 @@ function toArray(val) {
   return [];
 }
 
+let syncStarted = false;
+
 function startRealtimeSync() {
+  if (syncStarted) return;
+  syncStarted = true;
+
   dataRef.on('value', snapshot => {
+    // Skip re-reading our own writes (we already have the latest data)
+    if (isSaving) return;
+
     const val = snapshot.val();
     if (val) {
       data = { ...getDefaultData(), ...val };
@@ -1095,6 +1112,9 @@ function startRealtimeSync() {
     }
     firebaseReady = true;
     renderAll();
+  }, err => {
+    console.error('Firebase read failed:', err);
+    alert('Cannot connect to database.\n' + err.message);
   });
 }
 
