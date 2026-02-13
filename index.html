@@ -849,8 +849,8 @@ textarea.form-input { resize: vertical; min-height: 60px; }
       <button class="back-btn" onclick="closeSubPage()">&#8249; Menu</button>
       <div class="section-title">Settings</div>
 
-      <div class="settings-section">
-        <h3>Password</h3>
+      <div class="settings-section" id="password-section" style="display:none;">
+        <h3>Password (Admin Only)</h3>
         <div class="card">
           <div class="form-group">
             <label>Change Group Password</label>
@@ -1031,9 +1031,11 @@ const db = firebase.database();
 const dataRef = db.ref('ski27');
 const passwordRef = db.ref('ski27_password');
 const authorizedRef = db.ref('ski27_authorized');
+const adminRef = db.ref('ski27_admin');
 
 // ── State ──
 const SESSION_KEY = 'ski27_session';
+let isAdmin = false;
 
 const CATEGORY_ICONS = {
   accommodation: '&#127968;',
@@ -1140,7 +1142,10 @@ function attemptLogin() {
   if (!pw) { error.textContent = 'Please enter a password'; return; }
 
   if (!cachedPassword) {
-    // First time: set password
+    // First time: set password and become admin
+    const user = auth.currentUser;
+    if (user) adminRef.set(user.uid);
+    isAdmin = true;
     setPassword(pw);
     authorizeCurrentUser();
     sessionStorage.setItem(SESSION_KEY, '1');
@@ -1179,6 +1184,7 @@ function logout() {
 }
 
 function changePassword() {
+  if (!isAdmin) { alert('Only the group admin can change the password.'); return; }
   const pw = document.getElementById('new-password').value.trim();
   if (!pw) return;
   if (!confirm('This will log out all other users. Continue?')) return;
@@ -1189,6 +1195,10 @@ function changePassword() {
     document.getElementById('new-password').value = '';
     alert('Password updated! All other users will need to re-enter the new password.');
   });
+}
+
+function updateAdminUI() {
+  document.getElementById('password-section').style.display = isAdmin ? '' : 'none';
 }
 
 // ── App Init ──
@@ -1202,11 +1212,15 @@ function init() {
   // Sign in anonymously first, then proceed
   auth.signInAnonymously()
     .then(() => {
-      // Fetch password from Firebase
-      return passwordRef.once('value');
+      // Fetch password and admin UID from Firebase
+      return Promise.all([passwordRef.once('value'), adminRef.once('value')]);
     })
-    .then(snapshot => {
-      cachedPassword = snapshot.val();
+    .then(([pwSnapshot, adminSnapshot]) => {
+      cachedPassword = pwSnapshot.val();
+      const adminUid = adminSnapshot.val();
+      const user = auth.currentUser;
+      isAdmin = user && adminUid && user.uid === adminUid;
+      updateAdminUI();
 
       const hint = document.getElementById('login-hint');
       if (!cachedPassword) {
