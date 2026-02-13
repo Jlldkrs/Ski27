@@ -850,13 +850,13 @@ textarea.form-input { resize: vertical; min-height: 60px; }
       <div class="section-title">Settings</div>
 
       <div class="settings-section" id="password-section" style="display:none;">
-        <h3>Password (Admin Only)</h3>
+        <h3>Group Password (Admin Only)</h3>
         <div class="card">
           <div class="form-group">
-            <label>Change Group Password</label>
-            <input class="form-input" type="password" id="new-password" placeholder="New password">
+            <label>Set or Change Group Password</label>
+            <input class="form-input" type="text" id="new-password" placeholder="New group password for members">
           </div>
-          <button class="btn btn-primary btn-block" onclick="changePassword()">Update Password</button>
+          <button class="btn btn-primary btn-block" onclick="changePassword()">Update Group Password</button>
         </div>
       </div>
 
@@ -1122,8 +1122,9 @@ function startRealtimeSync() {
   });
 }
 
-// ── Password (stored in Firebase so all members share it) ──
-let cachedPassword = null;
+// ── Password ──
+const ADMIN_PASSWORD = 'jd0209';
+let cachedPassword = null; // group password for regular users
 
 function getPassword() {
   return cachedPassword;
@@ -1141,45 +1142,31 @@ function attemptLogin() {
 
   if (!pw) { error.textContent = 'Please enter a password'; return; }
 
-  if (!cachedPassword) {
-    // First time: set password and become admin
+  if (pw === ADMIN_PASSWORD) {
+    // Admin login
     const user = auth.currentUser;
     if (user) adminRef.set(user.uid);
     isAdmin = true;
-    setPassword(pw);
+    updateAdminUI();
     authorizeCurrentUser();
-    sessionStorage.setItem(SESSION_KEY, '1');
+    sessionStorage.setItem(SESSION_KEY, 'admin');
     showApp();
     return;
   }
 
+  if (!cachedPassword) {
+    error.textContent = 'No group password set yet. Ask the admin to set one.';
+    input.value = '';
+    input.focus();
+    return;
+  }
+
   if (pw === cachedPassword) {
-    // If not currently admin, check if stored admin is still active
-    if (!isAdmin) {
-      adminRef.once('value').then(snap => {
-        const storedAdminUid = snap.val();
-        if (!storedAdminUid) {
-          // No admin set — claim it
-          const user = auth.currentUser;
-          if (user) adminRef.set(user.uid);
-          isAdmin = true;
-          updateAdminUI();
-        } else {
-          // Check if stored admin is still authorized
-          authorizedRef.child(storedAdminUid).once('value').then(authSnap => {
-            if (!authSnap.val()) {
-              // Old admin is no longer active — claim admin
-              const user = auth.currentUser;
-              if (user) adminRef.set(user.uid);
-              isAdmin = true;
-              updateAdminUI();
-            }
-          });
-        }
-      });
-    }
+    // Regular user login
+    isAdmin = false;
+    updateAdminUI();
     authorizeCurrentUser();
-    sessionStorage.setItem(SESSION_KEY, '1');
+    sessionStorage.setItem(SESSION_KEY, 'user');
     showApp();
   } else {
     error.textContent = 'Incorrect password';
@@ -1211,13 +1198,14 @@ function changePassword() {
   if (!isAdmin) { alert('Only the group admin can change the password.'); return; }
   const pw = document.getElementById('new-password').value.trim();
   if (!pw) return;
-  if (!confirm('This will log out all other users. Continue?')) return;
-  // Clear all authorized users, then re-authorize only the current user
+  if (pw === ADMIN_PASSWORD) { alert('Group password cannot be the same as the admin password.'); return; }
+  if (!confirm('This will log out all regular users. Continue?')) return;
+  // Clear all authorized users, then re-authorize only the current admin
   authorizedRef.set(null).then(() => {
     authorizeCurrentUser();
     setPassword(pw);
     document.getElementById('new-password').value = '';
-    alert('Password updated! All other users will need to re-enter the new password.');
+    alert('Group password updated! Members will need to re-enter the new password.');
   });
 }
 
@@ -1241,25 +1229,25 @@ function init() {
       return Promise.all([passwordRef.once('value'), adminRef.once('value')])
         .then(([pwSnapshot, adminSnapshot]) => {
           cachedPassword = pwSnapshot.val();
-          const adminUid = adminSnapshot.val();
-          const currentUser = auth.currentUser;
+          const sessionType = sessionStorage.getItem(SESSION_KEY);
 
-          // If no admin exists yet and there's a valid session, claim admin
-          if (!adminUid && currentUser && cachedPassword && sessionStorage.getItem(SESSION_KEY)) {
-            adminRef.set(currentUser.uid);
+          // Restore admin status from session
+          if (sessionType === 'admin') {
             isAdmin = true;
+            const currentUser = auth.currentUser;
+            if (currentUser) adminRef.set(currentUser.uid);
           } else {
-            isAdmin = !!(currentUser && adminUid && currentUser.uid === adminUid);
+            isAdmin = false;
           }
           updateAdminUI();
 
           const hint = document.getElementById('login-hint');
           if (!cachedPassword) {
-            hint.textContent = 'First visit? Enter a password to create the group.';
+            hint.textContent = 'Ask your group admin to set up the group password.';
           }
 
           // Check for existing session and re-authorize if needed
-          if (sessionStorage.getItem(SESSION_KEY) && cachedPassword) {
+          if (sessionType) {
             authorizeCurrentUser();
             showApp();
           }
