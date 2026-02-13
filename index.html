@@ -1181,9 +1181,14 @@ function logout() {
 function changePassword() {
   const pw = document.getElementById('new-password').value.trim();
   if (!pw) return;
-  setPassword(pw);
-  document.getElementById('new-password').value = '';
-  alert('Password updated!');
+  if (!confirm('This will log out all other users. Continue?')) return;
+  // Clear all authorized users, then re-authorize only the current user
+  authorizedRef.set(null).then(() => {
+    authorizeCurrentUser();
+    setPassword(pw);
+    document.getElementById('new-password').value = '';
+    alert('Password updated! All other users will need to re-enter the new password.');
+  });
 }
 
 // ── App Init ──
