@@ -679,6 +679,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
@@ -1025,9 +1026,11 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const db = firebase.database();
 const dataRef = db.ref('ski27');
 const passwordRef = db.ref('ski27_password');
+const authorizedRef = db.ref('ski27_authorized');
 
 // ── State ──
 const SESSION_KEY = 'ski27_session';
@@ -1139,12 +1142,14 @@ function attemptLogin() {
   if (!cachedPassword) {
     // First time: set password
     setPassword(pw);
+    authorizeCurrentUser();
     sessionStorage.setItem(SESSION_KEY, '1');
     showApp();
     return;
   }
 
   if (pw === cachedPassword) {
+    authorizeCurrentUser();
     sessionStorage.setItem(SESSION_KEY, '1');
     showApp();
   } else {
@@ -1154,7 +1159,18 @@ function attemptLogin() {
   }
 }
 
+function authorizeCurrentUser() {
+  const user = auth.currentUser;
+  if (user) {
+    authorizedRef.child(user.uid).set(true);
+  }
+}
+
 function logout() {
+  const user = auth.currentUser;
+  if (user) {
+    authorizedRef.child(user.uid).remove();
+  }
   sessionStorage.removeItem(SESSION_KEY);
   document.getElementById('app').classList.remove('active');
   document.getElementById('login-screen').style.display = '';
@@ -1178,20 +1194,30 @@ function showApp() {
 }
 
 function init() {
-  // Fetch password from Firebase first, then decide what to show
-  passwordRef.once('value').then(snapshot => {
-    cachedPassword = snapshot.val();
+  // Sign in anonymously first, then proceed
+  auth.signInAnonymously()
+    .then(() => {
+      // Fetch password from Firebase
+      return passwordRef.once('value');
+    })
+    .then(snapshot => {
+      cachedPassword = snapshot.val();
 
-    const hint = document.getElementById('login-hint');
-    if (!cachedPassword) {
-      hint.textContent = 'First visit? Enter a password to create the group.';
-    }
+      const hint = document.getElementById('login-hint');
+      if (!cachedPassword) {
+        hint.textContent = 'First visit? Enter a password to create the group.';
+      }
 
-    // Check for existing session
-    if (sessionStorage.getItem(SESSION_KEY) && cachedPassword) {
-      showApp();
-    }
-  });
+      // Check for existing session and re-authorize if needed
+      if (sessionStorage.getItem(SESSION_KEY) && cachedPassword) {
+        authorizeCurrentUser();
+        showApp();
+      }
+    })
+    .catch(err => {
+      console.error('Auth failed:', err);
+      document.getElementById('login-error').textContent = 'Connection error. Please refresh.';
+    });
 
   // Also listen for password changes in real time
   passwordRef.on('value', snapshot => {
