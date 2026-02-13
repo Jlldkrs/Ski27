@@ -689,7 +689,8 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   <div class="login-logo">&#9968;</div>
   <div class="login-title">Ski27</div>
   <div class="login-subtitle">Group Holiday Planner</div>
-  <div class="login-box">
+  <div id="login-loading" style="color:rgba(255,255,255,0.6);margin-top:16px;">Connecting...</div>
+  <div class="login-box" id="login-box" style="display:none;">
     <input type="password" id="password-input" placeholder="Enter password" autocomplete="off">
     <button onclick="attemptLogin()">Enter</button>
     <div class="login-error" id="login-error"></div>
@@ -1291,14 +1292,19 @@ function showApp() {
 
 function ensureAuth() {
   return new Promise((resolve, reject) => {
-    // Check if already signed in
+    const timeout = setTimeout(() => {
+      reject(new Error('Authentication timed out. Check your internet connection.'));
+    }, 10000);
     const unsubscribe = auth.onAuthStateChanged(user => {
       unsubscribe();
       if (user) {
+        clearTimeout(timeout);
         resolve(user);
       } else {
         // Sign in anonymously — must complete before any DB reads
-        auth.signInAnonymously().then(cred => resolve(cred.user)).catch(reject);
+        auth.signInAnonymously()
+          .then(cred => { clearTimeout(timeout); resolve(cred.user); })
+          .catch(err => { clearTimeout(timeout); reject(err); });
       }
     });
   });
@@ -1330,12 +1336,18 @@ function init() {
       cachedPasswordHash = pwVal;
       const sessionType = sessionStorage.getItem(SESSION_KEY);
 
+      // Hide loading indicator
+      document.getElementById('login-loading').style.display = 'none';
+
       // If no admin password exists, show setup screen
       if (!cachedAdminHash) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('admin-setup-screen').style.display = '';
         return;
       }
+
+      // Show the login box now that we know passwords exist
+      document.getElementById('login-box').style.display = '';
 
       // Restore admin status from session
       isAdmin = (sessionType === 'admin');
@@ -1361,7 +1373,10 @@ function init() {
     })
     .catch(err => {
       console.error('Init failed:', err);
-      document.getElementById('login-error').textContent = 'Connection error. Please refresh.';
+      document.getElementById('login-loading').style.display = 'none';
+      document.getElementById('login-box').style.display = '';
+      const loginErr = document.getElementById('login-error');
+      loginErr.textContent = 'Connection error: ' + (err.code || err.message || err) + '. Please refresh the page.';
     });
 
   // Allow enter key on password inputs
