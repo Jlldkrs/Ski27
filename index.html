@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Ski27 - Holiday Planner</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface2: #334155;
+  --accent: #38bdf8;
+  --accent2: #818cf8;
+  --danger: #f87171;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --text: #f1f5f9;
+  --text2: #94a3b8;
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Login Screen ── */
+#login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 24px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+}
+
+.login-logo {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.login-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.login-subtitle {
+  color: var(--text2);
+  margin-bottom: 32px;
+  font-size: 14px;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 340px;
+}
+
+.login-box input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--surface2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.login-box input:focus {
+  border-color: var(--accent);
+}
+
+.login-box button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.login-box button:active { opacity: 0.8; }
+
+.login-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+  text-align: center;
+  min-height: 20px;
+}
+
+.login-hint {
+  color: var(--text2);
+  font-size: 12px;
+  margin-top: 24px;
+  text-align: center;
+}
+
+/* ── App Shell ── */
+#app { display: none; }
+#app.active { display: flex; flex-direction: column; min-height: 100dvh; }
+
+/* Header */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--surface2);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-header h1 {
+  font-size: 18px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header-actions { display: flex; gap: 8px; }
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.icon-btn:active { background: var(--accent); }
+
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--surface2);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.tab-bar button {
+  flex: 1;
+  padding: 8px 4px 10px;
+  border: none;
+  background: none;
+  color: var(--text2);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: color 0.2s;
+}
+
+.tab-bar button .tab-icon { font-size: 20px; }
+.tab-bar button.active { color: var(--accent); }
+
+/* Content */
+.content {
+  flex: 1;
+  padding: 16px;
+  padding-bottom: 80px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.badge-accent { background: rgba(56,189,248,0.15); color: var(--accent); }
+.badge-success { background: rgba(74,222,128,0.15); color: var(--success); }
+.badge-warning { background: rgba(251,191,36,0.15); color: var(--warning); }
+.badge-danger { background: rgba(248,113,113,0.15); color: var(--danger); }
+
+/* Form elements */
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--surface2);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus { border-color: var(--accent); }
+
+select.form-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 12L2 6h12z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+textarea.form-input { resize: vertical; min-height: 60px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.btn:active { opacity: 0.8; }
+.btn-primary { background: var(--accent); color: #0f172a; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-success { background: var(--success); color: #0f172a; }
+.btn-block { width: 100%; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+/* Member chips */
+.member-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.member-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.member-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: white;
+}
+
+.member-chip .remove-member {
+  background: none;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+}
+
+/* Expense list */
+.expense-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--surface2);
+}
+
+.expense-item:last-child { border-bottom: none; }
+
+.expense-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-right: 12px;
+  background: var(--bg);
+}
+
+.expense-info { flex: 1; }
+.expense-info .name { font-weight: 600; font-size: 14px; }
+.expense-info .meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.expense-amount { font-weight: 800; font-size: 16px; }
+
+/* Activity timeline */
+.timeline-day {
+  margin-bottom: 20px;
+}
+
+.timeline-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.activity-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent2);
+  min-width: 50px;
+}
+
+.activity-detail { flex: 1; }
+.activity-detail .name { font-weight: 600; font-size: 14px; }
+.activity-detail .desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.delete-btn:hover { color: var(--danger); }
+
+/* Balance summary */
+.balance-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--surface2);
+}
+
+.balance-item:last-child { border-bottom: none; }
+
+.settlement-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.settlement-arrow { color: var(--accent); font-weight: 700; }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  align-items: flex-end;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.modal-overlay.active { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 16px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 85dvh;
+  overflow-y: auto;
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--surface2);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+/* Checkbox list for splitting */
+.check-list label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.check-list input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+/* Trip info display */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--surface2);
+  font-size: 14px;
+}
+
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--text2); }
+.info-value { font-weight: 600; }
+
+/* Empty states */
+.empty-state {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--text2);
+}
+
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state .msg { font-size: 14px; }
+
+/* Settings specific */
+.settings-section {
+  margin-bottom: 24px;
+}
+
+.settings-section h3 {
+  font-size: 14px;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* Responsive tweaks */
+@media (min-width: 600px) {
+  .content { padding: 24px; padding-bottom: 80px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Login Screen ── -->
+<div id="login-screen">
+  <div class="login-logo">&#9968;</div>
+  <div class="login-title">Ski27</div>
+  <div class="login-subtitle">Group Holiday Planner</div>
+  <div class="login-box">
+    <input type="password" id="password-input" placeholder="Enter group password" autocomplete="off">
+    <button onclick="attemptLogin()">Enter</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+  <div class="login-hint" id="login-hint"></div>
+</div>
+
+<!-- ── Main App ── -->
+<div id="app">
+  <header class="app-header">
+    <h1>&#9968; Ski27</h1>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="exportData()" title="Export data">&#128190;</button>
+      <button class="icon-btn" onclick="logout()" title="Logout">&#10151;</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <!-- Overview Tab -->
+    <div class="tab-content active" id="tab-overview">
+      <div class="section-title">Trip Overview</div>
+
+      <div class="card" id="trip-info-card">
+        <div class="card-header">
+          <span class="card-title">Trip Details</span>
+          <button class="btn btn-sm btn-primary" onclick="openModal('trip-modal')">Edit</button>
+        </div>
+        <div id="trip-info-display"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Group Members</span>
+          <button class="btn btn-sm btn-primary" onclick="openModal('member-modal')">+ Add</button>
+        </div>
+        <div class="member-list" id="member-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Quick Summary</span>
+        </div>
+        <div id="summary-stats"></div>
+      </div>
+    </div>
+
+    <!-- Expenses Tab -->
+    <div class="tab-content" id="tab-expenses">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="section-title" style="margin-bottom:0">Expenses</div>
+        <button class="btn btn-sm btn-primary" onclick="openModal('expense-modal')">+ Add</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Total Spent</span>
+          <span id="total-expenses" style="font-size:20px;font-weight:800;color:var(--accent)"></span>
+        </div>
+      </div>
+
+      <div id="expense-list"></div>
+
+      <div class="card" style="margin-top:16px;">
+        <div class="card-title" style="margin-bottom:12px">Balances</div>
+        <div id="balance-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">Settlements</div>
+        <div id="settlement-list"></div>
+      </div>
+    </div>
+
+    <!-- Schedule Tab -->
+    <div class="tab-content" id="tab-schedule">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="section-title" style="margin-bottom:0">Schedule</div>
+        <button class="btn btn-sm btn-primary" onclick="openModal('activity-modal')">+ Add</button>
+      </div>
+      <div id="schedule-timeline"></div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="tab-settings">
+      <div class="section-title">Settings</div>
+
+      <div class="settings-section">
+        <h3>Password</h3>
+        <div class="card">
+          <div class="form-group">
+            <label>Change Group Password</label>
+            <input class="form-input" type="password" id="new-password" placeholder="New password">
+          </div>
+          <button class="btn btn-primary btn-block" onclick="changePassword()">Update Password</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Currency</h3>
+        <div class="card">
+          <div class="form-group">
+            <label>Display Currency</label>
+            <select class="form-input" id="currency-select" onchange="changeCurrency()">
+              <option value="EUR">EUR (&#8364;)</option>
+              <option value="USD">USD ($)</option>
+              <option value="GBP">GBP (&pound;)</option>
+              <option value="CHF">CHF (Fr.)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Data</h3>
+        <div class="card">
+          <button class="btn btn-primary btn-block" onclick="exportData()" style="margin-bottom:8px">Export Data (JSON)</button>
+          <button class="btn btn-block" onclick="document.getElementById('import-file').click()" style="background:var(--surface2);color:var(--text);margin-bottom:8px">Import Data (JSON)</button>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+          <button class="btn btn-danger btn-block" onclick="resetAllData()">Reset All Data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <nav class="tab-bar">
+    <button class="active" onclick="switchTab('overview', this)">
+      <span class="tab-icon">&#127968;</span>Overview
+    </button>
+    <button onclick="switchTab('expenses', this)">
+      <span class="tab-icon">&#128176;</span>Expenses
+    </button>
+    <button onclick="switchTab('schedule', this)">
+      <span class="tab-icon">&#128197;</span>Schedule
+    </button>
+    <button onclick="switchTab('settings', this)">
+      <span class="tab-icon">&#9881;</span>Settings
+    </button>
+  </nav>
+</div>
+
+<!-- ── Modals ── -->
+
+<!-- Trip Details Modal -->
+<div class="modal-overlay" id="trip-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Trip Details</div>
+    <div class="form-group">
+      <label>Destination</label>
+      <input class="form-input" id="trip-destination" placeholder="e.g. Val Thorens">
+    </div>
+    <div class="form-group">
+      <label>Start Date</label>
+      <input class="form-input" type="date" id="trip-start">
+    </div>
+    <div class="form-group">
+      <label>End Date</label>
+      <input class="form-input" type="date" id="trip-end">
+    </div>
+    <div class="form-group">
+      <label>Accommodation</label>
+      <input class="form-input" id="trip-accommodation" placeholder="e.g. Chalet Les Alpes">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea class="form-input" id="trip-notes" placeholder="Any extra info..."></textarea>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="saveTripDetails()">Save</button>
+    <button class="btn btn-block" style="background:var(--surface2);color:var(--text);margin-top:8px" onclick="closeModal('trip-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal-overlay" id="member-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add Member</div>
+    <div class="form-group">
+      <label>Name</label>
+      <input class="form-input" id="member-name" placeholder="e.g. Alex">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="addMember()">Add Member</button>
+    <button class="btn btn-block" style="background:var(--surface2);color:var(--text);margin-top:8px" onclick="closeModal('member-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Add Expense Modal -->
+<div class="modal-overlay" id="expense-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add Expense</div>
+    <div class="form-group">
+      <label>Description</label>
+      <input class="form-input" id="expense-desc" placeholder="e.g. Ski passes">
+    </div>
+    <div class="form-group">
+      <label>Amount</label>
+      <input class="form-input" type="number" step="0.01" id="expense-amount" placeholder="0.00">
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select class="form-input" id="expense-category">
+        <option value="accommodation">&#127968; Accommodation</option>
+        <option value="ski">&#9968; Ski / Lift Pass</option>
+        <option value="food">&#127860; Food & Drinks</option>
+        <option value="transport">&#128663; Transport</option>
+        <option value="rental">&#127935; Equipment Rental</option>
+        <option value="other">&#128230; Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Paid By</label>
+      <select class="form-input" id="expense-payer"></select>
+    </div>
+    <div class="form-group">
+      <label>Split Between</label>
+      <div class="check-list" id="expense-split-list"></div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="addExpense()">Add Expense</button>
+    <button class="btn btn-block" style="background:var(--surface2);color:var(--text);margin-top:8px" onclick="closeModal('expense-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Add Activity Modal -->
+<div class="modal-overlay" id="activity-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add Activity</div>
+    <div class="form-group">
+      <label>Date</label>
+      <input class="form-input" type="date" id="activity-date">
+    </div>
+    <div class="form-group">
+      <label>Time</label>
+      <input class="form-input" type="time" id="activity-time">
+    </div>
+    <div class="form-group">
+      <label>Activity</label>
+      <input class="form-input" id="activity-name" placeholder="e.g. Morning ski session">
+    </div>
+    <div class="form-group">
+      <label>Description (optional)</label>
+      <textarea class="form-input" id="activity-desc" placeholder="Details..."></textarea>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="addActivity()">Add Activity</button>
+    <button class="btn btn-block" style="background:var(--surface2);color:var(--text);margin-top:8px" onclick="closeModal('activity-modal')">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ── State ──
+const STORAGE_KEY = 'ski27_data';
+const PASSWORD_KEY = 'ski27_password';
+const SESSION_KEY = 'ski27_session';
+
+const CATEGORY_ICONS = {
+  accommodation: '&#127968;',
+  ski: '&#9968;',
+  food: '&#127860;',
+  transport: '&#128663;',
+  rental: '&#127935;',
+  other: '&#128230;'
+};
+
+const CURRENCY_SYMBOLS = { EUR: '\u20AC', USD: '$', GBP: '\u00A3', CHF: 'Fr.' };
+
+const MEMBER_COLORS = [
+  '#38bdf8','#818cf8','#f472b6','#4ade80','#fbbf24','#fb923c','#a78bfa','#34d399'
+];
+
+function getDefaultData() {
+  return {
+    trip: { destination: '', start: '', end: '', accommodation: '', notes: '' },
+    members: [],
+    expenses: [],
+    activities: [],
+    currency: 'EUR'
+  };
+}
+
+let data = getDefaultData();
+
+// ── Persistence ──
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function load() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      data = { ...getDefaultData(), ...JSON.parse(stored) };
+    } catch { data = getDefaultData(); }
+  }
+}
+
+// ── Password ──
+function getPassword() {
+  return localStorage.getItem(PASSWORD_KEY);
+}
+
+function setPassword(pw) {
+  localStorage.setItem(PASSWORD_KEY, pw);
+}
+
+function attemptLogin() {
+  const input = document.getElementById('password-input');
+  const error = document.getElementById('login-error');
+  const pw = input.value.trim();
+
+  if (!pw) { error.textContent = 'Please enter a password'; return; }
+
+  const stored = getPassword();
+  if (!stored) {
+    // First time: set password
+    setPassword(pw);
+    sessionStorage.setItem(SESSION_KEY, '1');
+    showApp();
+    return;
+  }
+
+  if (pw === stored) {
+    sessionStorage.setItem(SESSION_KEY, '1');
+    showApp();
+  } else {
+    error.textContent = 'Incorrect password';
+    input.value = '';
+    input.focus();
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('login-screen').style.display = '';
+  document.getElementById('password-input').value = '';
+  document.getElementById('login-error').textContent = '';
+}
+
+function changePassword() {
+  const pw = document.getElementById('new-password').value.trim();
+  if (!pw) return;
+  setPassword(pw);
+  document.getElementById('new-password').value = '';
+  alert('Password updated!');
+}
+
+// ── App Init ──
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  load();
+  renderAll();
+}
+
+function init() {
+  // Update login hint based on whether password exists
+  const hint = document.getElementById('login-hint');
+  if (!getPassword()) {
+    hint.textContent = 'First visit? Enter a password to create the group.';
+  }
+
+  // Check for existing session
+  if (sessionStorage.getItem(SESSION_KEY) && getPassword()) {
+    showApp();
+  }
+
+  // Allow enter key on password input
+  document.getElementById('password-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') attemptLogin();
+  });
+
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeModal(overlay.id);
+    });
+  });
+}
+
+// ── Tabs ──
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+  renderAll();
+}
+
+// ── Modals ──
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+  if (id === 'expense-modal') populateExpenseForm();
+  if (id === 'activity-modal') prefillActivityDate();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+// ── Members ──
+function addMember() {
+  const name = document.getElementById('member-name').value.trim();
+  if (!name) return;
+  if (data.members.find(m => m.name.toLowerCase() === name.toLowerCase())) {
+    alert('Member already exists');
+    return;
+  }
+  data.members.push({ id: Date.now().toString(), name, color: MEMBER_COLORS[data.members.length % MEMBER_COLORS.length] });
+  document.getElementById('member-name').value = '';
+  save();
+  closeModal('member-modal');
+  renderAll();
+}
+
+function removeMember(id) {
+  if (!confirm('Remove this member? Their expenses will remain.')) return;
+  data.members = data.members.filter(m => m.id !== id);
+  save();
+  renderAll();
+}
+
+function renderMembers() {
+  const el = document.getElementById('member-list');
+  if (data.members.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="msg">No members yet. Add your group!</div></div>';
+    return;
+  }
+  el.innerHTML = data.members.map(m => `
+    <div class="member-chip">
+      <div class="member-avatar" style="background:${m.color}">${m.name.charAt(0).toUpperCase()}</div>
+      ${m.name}
+      <button class="remove-member" onclick="removeMember('${m.id}')">&times;</button>
+    </div>
+  `).join('');
+}
+
+// ── Trip Details ──
+function saveTripDetails() {
+  data.trip.destination = document.getElementById('trip-destination').value.trim();
+  data.trip.start = document.getElementById('trip-start').value;
+  data.trip.end = document.getElementById('trip-end').value;
+  data.trip.accommodation = document.getElementById('trip-accommodation').value.trim();
+  data.trip.notes = document.getElementById('trip-notes').value.trim();
+  save();
+  closeModal('trip-modal');
+  renderAll();
+}
+
+function renderTripInfo() {
+  const t = data.trip;
+  const el = document.getElementById('trip-info-display');
+
+  // Pre-fill modal inputs
+  document.getElementById('trip-destination').value = t.destination;
+  document.getElementById('trip-start').value = t.start;
+  document.getElementById('trip-end').value = t.end;
+  document.getElementById('trip-accommodation').value = t.accommodation;
+  document.getElementById('trip-notes').value = t.notes;
+
+  if (!t.destination && !t.start) {
+    el.innerHTML = '<div style="color:var(--text2);font-size:14px;">Tap Edit to set up your trip details.</div>';
+    return;
+  }
+
+  const formatDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : '-';
+  const nights = t.start && t.end ? Math.ceil((new Date(t.end) - new Date(t.start)) / 86400000) : 0;
+
+  el.innerHTML = `
+    <div class="info-row"><span class="info-label">Destination</span><span class="info-value">${t.destination || '-'}</span></div>
+    <div class="info-row"><span class="info-label">Dates</span><span class="info-value">${formatDate(t.start)} - ${formatDate(t.end)}</span></div>
+    ${nights > 0 ? `<div class="info-row"><span class="info-label">Duration</span><span class="info-value">${nights} nights</span></div>` : ''}
+    <div class="info-row"><span class="info-label">Accommodation</span><span class="info-value">${t.accommodation || '-'}</span></div>
+    ${t.notes ? `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${escapeHTML(t.notes)}</span></div>` : ''}
+  `;
+}
+
+// ── Summary Stats ──
+function renderSummary() {
+  const el = document.getElementById('summary-stats');
+  const totalExpenses = data.expenses.reduce((s, e) => s + e.amount, 0);
+  const perPerson = data.members.length ? totalExpenses / data.members.length : 0;
+  const sym = CURRENCY_SYMBOLS[data.currency] || '\u20AC';
+
+  el.innerHTML = `
+    <div class="info-row"><span class="info-label">Members</span><span class="info-value">${data.members.length}</span></div>
+    <div class="info-row"><span class="info-label">Total Expenses</span><span class="info-value">${sym}${totalExpenses.toFixed(2)}</span></div>
+    <div class="info-row"><span class="info-label">Per Person (avg)</span><span class="info-value">${sym}${perPerson.toFixed(2)}</span></div>
+    <div class="info-row"><span class="info-label">Activities Planned</span><span class="info-value">${data.activities.length}</span></div>
+  `;
+}
+
+// ── Expenses ──
+function populateExpenseForm() {
+  const payer = document.getElementById('expense-payer');
+  const splitList = document.getElementById('expense-split-list');
+
+  payer.innerHTML = data.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  splitList.innerHTML = data.members.map(m => `
+    <label><input type="checkbox" value="${m.id}" checked> ${m.name}</label>
+  `).join('');
+
+  document.getElementById('expense-desc').value = '';
+  document.getElementById('expense-amount').value = '';
+}
+
+function addExpense() {
+  const desc = document.getElementById('expense-desc').value.trim();
+  const amount = parseFloat(document.getElementById('expense-amount').value);
+  const category = document.getElementById('expense-category').value;
+  const payer = document.getElementById('expense-payer').value;
+  const splitCheckboxes = document.querySelectorAll('#expense-split-list input:checked');
+  const splitBetween = Array.from(splitCheckboxes).map(cb => cb.value);
+
+  if (!desc) { alert('Please enter a description'); return; }
+  if (!amount || amount <= 0) { alert('Please enter a valid amount'); return; }
+  if (!payer) { alert('Please select who paid'); return; }
+  if (splitBetween.length === 0) { alert('Please select at least one person to split with'); return; }
+
+  data.expenses.push({
+    id: Date.now().toString(),
+    desc, amount, category, payer, splitBetween,
+    date: new Date().toISOString()
+  });
+
+  save();
+  closeModal('expense-modal');
+  renderAll();
+}
+
+function removeExpense(id) {
+  if (!confirm('Delete this expense?')) return;
+  data.expenses = data.expenses.filter(e => e.id !== id);
+  save();
+  renderAll();
+}
+
+function renderExpenses() {
+  const sym = CURRENCY_SYMBOLS[data.currency] || '\u20AC';
+  const total = data.expenses.reduce((s, e) => s + e.amount, 0);
+  document.getElementById('total-expenses').textContent = sym + total.toFixed(2);
+
+  const list = document.getElementById('expense-list');
+  if (data.expenses.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">&#128176;</div><div class="msg">No expenses yet</div></div>';
+  } else {
+    list.innerHTML = '<div class="card">' + data.expenses.map(e => {
+      const payer = data.members.find(m => m.id === e.payer);
+      return `
+        <div class="expense-item">
+          <div class="expense-icon">${CATEGORY_ICONS[e.category] || '&#128230;'}</div>
+          <div class="expense-info">
+            <div class="name">${escapeHTML(e.desc)}</div>
+            <div class="meta">Paid by ${payer ? payer.name : 'Unknown'} &middot; Split ${e.splitBetween.length} ways</div>
+          </div>
+          <div class="expense-amount">${sym}${e.amount.toFixed(2)}</div>
+          <button class="delete-btn" onclick="removeExpense('${e.id}')" style="margin-left:8px">&times;</button>
+        </div>
+      `;
+    }).join('') + '</div>';
+  }
+
+  renderBalances();
+}
+
+function renderBalances() {
+  const sym = CURRENCY_SYMBOLS[data.currency] || '\u20AC';
+
+  // Calculate balances
+  const balances = {};
+  data.members.forEach(m => balances[m.id] = 0);
+
+  data.expenses.forEach(e => {
+    const share = e.amount / e.splitBetween.length;
+    if (balances[e.payer] !== undefined) balances[e.payer] += e.amount;
+    e.splitBetween.forEach(id => {
+      if (balances[id] !== undefined) balances[id] -= share;
+    });
+  });
+
+  // Render balances
+  const balanceEl = document.getElementById('balance-list');
+  if (data.members.length === 0) {
+    balanceEl.innerHTML = '<div style="color:var(--text2);font-size:13px;">Add members to see balances.</div>';
+  } else {
+    balanceEl.innerHTML = data.members.map(m => {
+      const bal = balances[m.id] || 0;
+      const cls = bal > 0.01 ? 'badge-success' : (bal < -0.01 ? 'badge-danger' : 'badge-accent');
+      const prefix = bal > 0.01 ? '+' : '';
+      return `
+        <div class="balance-item">
+          <span>${m.name}</span>
+          <span class="badge ${cls}">${prefix}${sym}${bal.toFixed(2)}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Calculate settlements (simplified debt simplification)
+  const settlementEl = document.getElementById('settlement-list');
+  const debtors = [];
+  const creditors = [];
+
+  data.members.forEach(m => {
+    const bal = balances[m.id] || 0;
+    if (bal < -0.01) debtors.push({ ...m, amount: -bal });
+    else if (bal > 0.01) creditors.push({ ...m, amount: bal });
+  });
+
+  debtors.sort((a, b) => b.amount - a.amount);
+  creditors.sort((a, b) => b.amount - a.amount);
+
+  const settlements = [];
+  let di = 0, ci = 0;
+  while (di < debtors.length && ci < creditors.length) {
+    const transfer = Math.min(debtors[di].amount, creditors[ci].amount);
+    if (transfer > 0.01) {
+      settlements.push({ from: debtors[di].name, to: creditors[ci].name, amount: transfer });
+    }
+    debtors[di].amount -= transfer;
+    creditors[ci].amount -= transfer;
+    if (debtors[di].amount < 0.01) di++;
+    if (creditors[ci].amount < 0.01) ci++;
+  }
+
+  if (settlements.length === 0) {
+    settlementEl.innerHTML = '<div style="color:var(--text2);font-size:13px;">All settled up!</div>';
+  } else {
+    settlementEl.innerHTML = settlements.map(s => `
+      <div class="settlement-item">
+        <strong>${s.from}</strong>
+        <span class="settlement-arrow">&rarr;</span>
+        <strong>${s.to}</strong>
+        <span style="margin-left:auto;font-weight:700;">${sym}${s.amount.toFixed(2)}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// ── Schedule ──
+function prefillActivityDate() {
+  const t = data.trip;
+  if (t.start && !document.getElementById('activity-date').value) {
+    document.getElementById('activity-date').value = t.start;
+  }
+  document.getElementById('activity-name').value = '';
+  document.getElementById('activity-desc').value = '';
+  document.getElementById('activity-time').value = '';
+}
+
+function addActivity() {
+  const date = document.getElementById('activity-date').value;
+  const time = document.getElementById('activity-time').value;
+  const name = document.getElementById('activity-name').value.trim();
+  const desc = document.getElementById('activity-desc').value.trim();
+
+  if (!date) { alert('Please select a date'); return; }
+  if (!name) { alert('Please enter an activity name'); return; }
+
+  data.activities.push({
+    id: Date.now().toString(),
+    date, time, name, desc
+  });
+
+  data.activities.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return (a.time || '').localeCompare(b.time || '');
+  });
+
+  save();
+  closeModal('activity-modal');
+  renderAll();
+}
+
+function removeActivity(id) {
+  if (!confirm('Delete this activity?')) return;
+  data.activities = data.activities.filter(a => a.id !== id);
+  save();
+  renderAll();
+}
+
+function renderSchedule() {
+  const el = document.getElementById('schedule-timeline');
+
+  if (data.activities.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">&#128197;</div><div class="msg">No activities planned yet</div></div>';
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  data.activities.forEach(a => {
+    if (!groups[a.date]) groups[a.date] = [];
+    groups[a.date].push(a);
+  });
+
+  el.innerHTML = Object.entries(groups).map(([date, activities]) => {
+    const formatted = new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    return `
+      <div class="timeline-day">
+        <div class="timeline-date">${formatted}</div>
+        ${activities.map(a => `
+          <div class="activity-item">
+            <div class="activity-time">${a.time || '--:--'}</div>
+            <div class="activity-detail">
+              <div class="name">${escapeHTML(a.name)}</div>
+              ${a.desc ? `<div class="desc">${escapeHTML(a.desc)}</div>` : ''}
+            </div>
+            <button class="delete-btn" onclick="removeActivity('${a.id}')">&times;</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Settings ──
+function changeCurrency() {
+  data.currency = document.getElementById('currency-select').value;
+  save();
+  renderAll();
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ski27-data.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      data = { ...getDefaultData(), ...imported };
+      save();
+      renderAll();
+      alert('Data imported successfully!');
+    } catch {
+      alert('Invalid file format');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function resetAllData() {
+  if (!confirm('This will delete ALL trip data. Are you sure?')) return;
+  if (!confirm('Really? This cannot be undone.')) return;
+  data = getDefaultData();
+  save();
+  renderAll();
+}
+
+// ── Helpers ──
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderAll() {
+  renderTripInfo();
+  renderMembers();
+  renderSummary();
+  renderExpenses();
+  renderSchedule();
+  document.getElementById('currency-select').value = data.currency;
+}
+
+// ── Boot ──
+init();
+</script>
+</body>
+</html>
