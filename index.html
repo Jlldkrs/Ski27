@@ -1304,7 +1304,12 @@ function ensureAuth() {
         // Sign in anonymously — must complete before any DB reads
         auth.signInAnonymously()
           .then(cred => { clearTimeout(timeout); resolve(cred.user); })
-          .catch(err => { clearTimeout(timeout); reject(err); });
+          .catch(err => {
+            clearTimeout(timeout);
+            console.warn('Anonymous auth failed, trying without auth:', err.code);
+            // If anonymous auth is not enabled, resolve anyway and let DB rules decide
+            resolve(null);
+          });
       }
     });
   });
@@ -1374,9 +1379,13 @@ function init() {
     .catch(err => {
       console.error('Init failed:', err);
       document.getElementById('login-loading').style.display = 'none';
-      document.getElementById('login-box').style.display = '';
       const loginErr = document.getElementById('login-error');
-      loginErr.textContent = 'Connection error: ' + (err.code || err.message || err) + '. Please refresh the page.';
+      loginErr.style.display = '';
+      if (err.code === 'PERMISSION_DENIED' || (err.message && err.message.includes('Permission denied'))) {
+        loginErr.textContent = 'Database permission denied. Please enable Anonymous Authentication in Firebase Console (Authentication → Sign-in method → Anonymous → Enable), then refresh.';
+      } else {
+        loginErr.textContent = 'Connection error: ' + (err.code || err.message || err) + '. Please refresh the page.';
+      }
     });
 
   // Allow enter key on password inputs
