@@ -678,6 +678,8 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   .content { padding: 24px; padding-bottom: 80px; }
 }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -1011,9 +1013,24 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 </div>
 
 <script>
+// ── Firebase Init ──
+const firebaseConfig = {
+  apiKey: "AIzaSyAHe5my3vkEemKB0jBSmPhIJZKzhM2xehQ",
+  authDomain: "ski27-d72f4.firebaseapp.com",
+  databaseURL: "https://ski27-d72f4-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "ski27-d72f4",
+  storageBucket: "ski27-d72f4.firebasestorage.app",
+  messagingSenderId: "932545776036",
+  appId: "1:932545776036:web:2350360be04ceff83a1931",
+  measurementId: "G-5HW8CEJW8H"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const dataRef = db.ref('ski27');
+const passwordRef = db.ref('ski27_password');
+
 // ── State ──
-const STORAGE_KEY = 'ski27_data';
-const PASSWORD_KEY = 'ski27_password';
 const SESSION_KEY = 'ski27_session';
 
 const CATEGORY_ICONS = {
@@ -1038,34 +1055,46 @@ function getDefaultData() {
     expenses: [],
     activities: [],
     packingItems: [],
-    profileMember: '',
     currency: 'EUR'
   };
 }
 
 let data = getDefaultData();
+let firebaseReady = false;
 
-// ── Persistence ──
+// ── Persistence (Firebase) ──
 function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  dataRef.set(data);
 }
 
-function load() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      data = { ...getDefaultData(), ...JSON.parse(stored) };
-    } catch { data = getDefaultData(); }
-  }
+function startRealtimeSync() {
+  dataRef.on('value', snapshot => {
+    const val = snapshot.val();
+    if (val) {
+      data = { ...getDefaultData(), ...val };
+      // Ensure arrays are actually arrays (Firebase drops empty arrays)
+      if (!Array.isArray(data.members)) data.members = [];
+      if (!Array.isArray(data.expenses)) data.expenses = [];
+      if (!Array.isArray(data.activities)) data.activities = [];
+      if (!Array.isArray(data.packingItems)) data.packingItems = [];
+    } else {
+      data = getDefaultData();
+    }
+    firebaseReady = true;
+    renderAll();
+  });
 }
 
-// ── Password ──
+// ── Password (stored in Firebase so all members share it) ──
+let cachedPassword = null;
+
 function getPassword() {
-  return localStorage.getItem(PASSWORD_KEY);
+  return cachedPassword;
 }
 
 function setPassword(pw) {
-  localStorage.setItem(PASSWORD_KEY, pw);
+  cachedPassword = pw;
+  passwordRef.set(pw);
 }
 
 function attemptLogin() {
@@ -1075,8 +1104,7 @@ function attemptLogin() {
 
   if (!pw) { error.textContent = 'Please enter a password'; return; }
 
-  const stored = getPassword();
-  if (!stored) {
+  if (!cachedPassword) {
     // First time: set password
     setPassword(pw);
     sessionStorage.setItem(SESSION_KEY, '1');
@@ -1084,7 +1112,7 @@ function attemptLogin() {
     return;
   }
 
-  if (pw === stored) {
+  if (pw === cachedPassword) {
     sessionStorage.setItem(SESSION_KEY, '1');
     showApp();
   } else {
@@ -1114,21 +1142,29 @@ function changePassword() {
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('active');
-  load();
-  renderAll();
+  startRealtimeSync();
 }
 
 function init() {
-  // Update login hint based on whether password exists
-  const hint = document.getElementById('login-hint');
-  if (!getPassword()) {
-    hint.textContent = 'First visit? Enter a password to create the group.';
-  }
+  // Fetch password from Firebase first, then decide what to show
+  passwordRef.once('value').then(snapshot => {
+    cachedPassword = snapshot.val();
 
-  // Check for existing session
-  if (sessionStorage.getItem(SESSION_KEY) && getPassword()) {
-    showApp();
-  }
+    const hint = document.getElementById('login-hint');
+    if (!cachedPassword) {
+      hint.textContent = 'First visit? Enter a password to create the group.';
+    }
+
+    // Check for existing session
+    if (sessionStorage.getItem(SESSION_KEY) && cachedPassword) {
+      showApp();
+    }
+  });
+
+  // Also listen for password changes in real time
+  passwordRef.on('value', snapshot => {
+    cachedPassword = snapshot.val();
+  });
 
   // Allow enter key on password input
   document.getElementById('password-input').addEventListener('keydown', e => {
@@ -1595,10 +1631,18 @@ function renderPackingList() {
   }).join('');
 }
 
-// ── Profile ──
+// ── Profile (local per device) ──
+function getLocalProfileMember() {
+  return localStorage.getItem('ski27_profileMember') || '';
+}
+
+function setLocalProfileMember(id) {
+  localStorage.setItem('ski27_profileMember', id);
+}
+
 function renderProfile() {
   const select = document.getElementById('profile-member-select');
-  const currentVal = data.profileMember || '';
+  const currentVal = getLocalProfileMember();
   select.innerHTML = '<option value="">-- Choose your name --</option>' +
     data.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
   select.value = currentVal;
@@ -1606,14 +1650,14 @@ function renderProfile() {
   const avatar = document.getElementById('profile-avatar');
   const statsContainer = document.getElementById('profile-stats');
 
-  if (!currentVal || !data.members.find(m => m.id === currentVal)) {
+  const member = data.members.find(m => m.id === currentVal);
+  if (!currentVal || !member) {
     avatar.textContent = '?';
     avatar.style.background = 'linear-gradient(135deg, var(--accent), var(--accent2))';
     statsContainer.style.display = 'none';
     return;
   }
 
-  const member = data.members.find(m => m.id === currentVal);
   avatar.textContent = member.name.charAt(0).toUpperCase();
   avatar.style.background = member.color;
   statsContainer.style.display = 'block';
@@ -1645,8 +1689,7 @@ function renderProfile() {
 }
 
 function selectProfileMember() {
-  data.profileMember = document.getElementById('profile-member-select').value;
-  save();
+  setLocalProfileMember(document.getElementById('profile-member-select').value);
   renderProfile();
 }
 
