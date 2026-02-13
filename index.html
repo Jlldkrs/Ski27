@@ -679,7 +679,6 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
@@ -1026,12 +1025,9 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
 const db = firebase.database();
 const dataRef = db.ref('ski27');
 const passwordRef = db.ref('ski27_password');
-const authorizedRef = db.ref('ski27_authorized');
-const adminRef = db.ref('ski27_admin');
 
 // ── State ──
 const SESSION_KEY = 'ski27_session';
@@ -1144,11 +1140,8 @@ function attemptLogin() {
 
   if (pw === ADMIN_PASSWORD) {
     // Admin login
-    const user = auth.currentUser;
-    if (user) adminRef.set(user.uid);
     isAdmin = true;
     updateAdminUI();
-    authorizeCurrentUser();
     sessionStorage.setItem(SESSION_KEY, 'admin');
     showApp();
     return;
@@ -1165,7 +1158,6 @@ function attemptLogin() {
     // Regular user login
     isAdmin = false;
     updateAdminUI();
-    authorizeCurrentUser();
     sessionStorage.setItem(SESSION_KEY, 'user');
     showApp();
   } else {
@@ -1175,19 +1167,9 @@ function attemptLogin() {
   }
 }
 
-function authorizeCurrentUser() {
-  const user = auth.currentUser;
-  if (user) {
-    authorizedRef.child(user.uid).set(true);
-  }
-}
-
 function logout() {
-  const user = auth.currentUser;
-  if (user) {
-    authorizedRef.child(user.uid).remove();
-  }
   sessionStorage.removeItem(SESSION_KEY);
+  isAdmin = false;
   document.getElementById('app').classList.remove('active');
   document.getElementById('login-screen').style.display = '';
   document.getElementById('password-input').value = '';
@@ -1200,13 +1182,9 @@ function changePassword() {
   if (!pw) return;
   if (pw === ADMIN_PASSWORD) { alert('Group password cannot be the same as the admin password.'); return; }
   if (!confirm('This will log out all regular users. Continue?')) return;
-  // Clear all authorized users, then re-authorize only the current admin
-  authorizedRef.set(null).then(() => {
-    authorizeCurrentUser();
-    setPassword(pw);
-    document.getElementById('new-password').value = '';
-    alert('Group password updated! Members will need to re-enter the new password.');
-  });
+  setPassword(pw);
+  document.getElementById('new-password').value = '';
+  alert('Group password updated! Members will need to re-enter the new password.');
 }
 
 function updateAdminUI() {
@@ -1221,61 +1199,34 @@ function showApp() {
 }
 
 function init() {
-  // Wait for existing auth state before signing in
-  const unsubscribe = auth.onAuthStateChanged(user => {
-    unsubscribe(); // only handle the first callback
+  // Load password and set up the app
+  passwordRef.once('value')
+    .then(pwSnapshot => {
+      cachedPassword = pwSnapshot.val();
+      const sessionType = sessionStorage.getItem(SESSION_KEY);
 
-    const afterAuth = () => {
-      return Promise.all([passwordRef.once('value'), adminRef.once('value')])
-        .then(([pwSnapshot, adminSnapshot]) => {
-          cachedPassword = pwSnapshot.val();
-          const sessionType = sessionStorage.getItem(SESSION_KEY);
+      // Restore admin status from session
+      isAdmin = (sessionType === 'admin');
+      updateAdminUI();
 
-          // Restore admin status from session
-          if (sessionType === 'admin') {
-            isAdmin = true;
-            const currentUser = auth.currentUser;
-            if (currentUser) adminRef.set(currentUser.uid);
-          } else {
-            isAdmin = false;
-          }
-          updateAdminUI();
+      const hint = document.getElementById('login-hint');
+      if (!cachedPassword) {
+        hint.textContent = 'Ask your group admin to set up the group password.';
+      }
 
-          const hint = document.getElementById('login-hint');
-          if (!cachedPassword) {
-            hint.textContent = 'Ask your group admin to set up the group password.';
-          }
-
-          // Check for existing session and re-authorize if needed
-          if (sessionType) {
-            authorizeCurrentUser();
-            showApp();
-          }
-        });
-    };
-
-    const startListenersAndAuth = () => {
-      // Start realtime password listener only after auth is ready
-      passwordRef.on('value', snapshot => {
-        cachedPassword = snapshot.val();
-      });
-      return afterAuth();
-    };
-
-    const handleError = (err) => {
-      console.error('Auth failed:', err);
+      // Check for existing session and re-enter app
+      if (sessionType) {
+        showApp();
+      }
+    })
+    .catch(err => {
+      console.error('Init failed:', err);
       document.getElementById('login-error').textContent = 'Connection error. Please refresh.';
-    };
+    });
 
-    if (user) {
-      // Already signed in — reuse existing session (preserves UID)
-      startListenersAndAuth().catch(handleError);
-    } else {
-      // No existing session — sign in anonymously
-      auth.signInAnonymously()
-        .then(() => startListenersAndAuth())
-        .catch(handleError);
-    }
+  // Listen for password changes in real time
+  passwordRef.on('value', snapshot => {
+    cachedPassword = snapshot.val();
   });
 
   // Allow enter key on password input
