@@ -1067,16 +1067,29 @@ function save() {
   dataRef.set(data);
 }
 
+// Firebase converts arrays to objects with numeric keys — convert them back
+function toArray(val) {
+  if (Array.isArray(val)) return val;
+  if (val && typeof val === 'object') return Object.values(val);
+  return [];
+}
+
 function startRealtimeSync() {
   dataRef.on('value', snapshot => {
     const val = snapshot.val();
     if (val) {
       data = { ...getDefaultData(), ...val };
-      // Ensure arrays are actually arrays (Firebase drops empty arrays)
-      if (!Array.isArray(data.members)) data.members = [];
-      if (!Array.isArray(data.expenses)) data.expenses = [];
-      if (!Array.isArray(data.activities)) data.activities = [];
-      if (!Array.isArray(data.packingItems)) data.packingItems = [];
+      // Firebase stores arrays as objects with numeric keys — restore them
+      data.members = toArray(data.members);
+      data.expenses = toArray(data.expenses);
+      data.activities = toArray(data.activities);
+      data.packingItems = toArray(data.packingItems);
+      // Firebase also converts nested arrays inside expenses (splitBetween)
+      data.expenses.forEach(e => {
+        if (e.splitBetween && !Array.isArray(e.splitBetween)) {
+          e.splitBetween = Object.values(e.splitBetween);
+        }
+      });
     } else {
       data = getDefaultData();
     }
