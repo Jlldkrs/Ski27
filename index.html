@@ -1154,7 +1154,7 @@ function startRealtimeSync() {
 
 // ── Password ──
 let cachedAdminHash = null; // hashed admin password from Firebase
-let cachedPassword = null; // group password for regular users
+let cachedPasswordHash = null; // hashed group password from Firebase
 
 async function hashPassword(pw) {
   const encoded = new TextEncoder().encode(pw);
@@ -1162,9 +1162,10 @@ async function hashPassword(pw) {
   return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function setPassword(pw) {
-  cachedPassword = pw;
-  passwordRef.set(pw);
+async function setPassword(pw) {
+  const hashed = await hashPassword(pw);
+  cachedPasswordHash = hashed;
+  passwordRef.set(hashed);
 }
 
 async function attemptLogin() {
@@ -1174,26 +1175,25 @@ async function attemptLogin() {
 
   if (!pw) { error.textContent = 'Please enter a password'; return; }
 
+  const inputHash = await hashPassword(pw);
+
   // Check admin password
-  if (cachedAdminHash) {
-    const inputHash = await hashPassword(pw);
-    if (inputHash === cachedAdminHash) {
-      isAdmin = true;
-      updateAdminUI();
-      sessionStorage.setItem(SESSION_KEY, 'admin');
-      showApp();
-      return;
-    }
+  if (cachedAdminHash && inputHash === cachedAdminHash) {
+    isAdmin = true;
+    updateAdminUI();
+    sessionStorage.setItem(SESSION_KEY, 'admin');
+    showApp();
+    return;
   }
 
-  if (!cachedPassword) {
+  if (!cachedPasswordHash) {
     error.textContent = 'No group password set yet. Ask the admin to set one.';
     input.value = '';
     input.focus();
     return;
   }
 
-  if (pw === cachedPassword) {
+  if (inputHash === cachedPasswordHash) {
     // Regular user login
     isAdmin = false;
     updateAdminUI();
@@ -1302,7 +1302,7 @@ function init() {
   ])
     .then(([adminSnapshot, pwSnapshot]) => {
       cachedAdminHash = adminSnapshot.val();
-      cachedPassword = pwSnapshot.val();
+      cachedPasswordHash = pwSnapshot.val();
       const sessionType = sessionStorage.getItem(SESSION_KEY);
 
       // If no admin password exists, show setup screen
@@ -1317,7 +1317,7 @@ function init() {
       updateAdminUI();
 
       const hint = document.getElementById('login-hint');
-      if (!cachedPassword) {
+      if (!cachedPasswordHash) {
         hint.textContent = 'Ask your group admin to set up the group password.';
       }
 
@@ -1336,7 +1336,7 @@ function init() {
     cachedAdminHash = snapshot.val();
   });
   passwordRef.on('value', snapshot => {
-    cachedPassword = snapshot.val();
+    cachedPasswordHash = snapshot.val();
   });
 
   // Allow enter key on password inputs
