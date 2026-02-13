@@ -690,7 +690,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   <div class="login-title">Ski27</div>
   <div class="login-subtitle">Group Holiday Planner</div>
   <div class="login-box">
-    <input type="password" id="password-input" placeholder="Enter group password" autocomplete="off">
+    <input type="password" id="password-input" placeholder="Enter password" autocomplete="off">
     <button onclick="attemptLogin()">Enter</button>
     <div class="login-error" id="login-error"></div>
   </div>
@@ -1188,14 +1188,7 @@ async function attemptLogin() {
     return;
   }
 
-  if (!cachedPasswordHash) {
-    error.textContent = 'No group password set yet. Ask the admin to set one.';
-    input.value = '';
-    input.focus();
-    return;
-  }
-
-  if (inputHash === cachedPasswordHash) {
+  if (cachedPasswordHash && inputHash === cachedPasswordHash) {
     // Regular user login
     isAdmin = false;
     updateAdminUI();
