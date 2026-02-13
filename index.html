@@ -535,6 +535,144 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   margin-bottom: 8px;
 }
 
+/* Menu list */
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  border: none;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s;
+}
+
+.menu-item:active { background: var(--surface2); }
+
+.menu-item .menu-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.menu-item .menu-label { flex: 1; }
+
+.menu-item .menu-desc {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+.menu-item .menu-chevron {
+  color: var(--text2);
+  font-size: 18px;
+}
+
+/* Sub-page back button */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 12px;
+}
+
+.back-btn:active { opacity: 0.7; }
+
+/* Packing list */
+.packing-category { margin-bottom: 16px; }
+
+.packing-category-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.packing-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.packing-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.packing-item.checked .packing-text {
+  text-decoration: line-through;
+  color: var(--text2);
+}
+
+.packing-text { flex: 1; }
+
+.packing-assignee {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--text2);
+}
+
+.add-packing-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.add-packing-row input { flex: 1; }
+
+/* Profile */
+.profile-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 800;
+  color: white;
+  margin: 0 auto 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+}
+
 /* Responsive tweaks */
 @media (min-width: 600px) {
   .content { padding: 24px; padding-bottom: 80px; }
@@ -631,8 +769,81 @@ textarea.form-input { resize: vertical; min-height: 60px; }
       <div id="schedule-timeline"></div>
     </div>
 
-    <!-- Settings Tab -->
+    <!-- Menu Tab -->
+    <div class="tab-content" id="tab-menu">
+      <div class="section-title">Menu</div>
+      <div class="menu-list">
+        <button class="menu-item" onclick="openSubPage('packing')">
+          <div class="menu-icon" style="background:rgba(74,222,128,0.15);">&#127890;</div>
+          <div class="menu-label">Packing List<div class="menu-desc">Track what to bring</div></div>
+          <span class="menu-chevron">&#8250;</span>
+        </button>
+        <button class="menu-item" onclick="openSubPage('profile')">
+          <div class="menu-icon" style="background:rgba(129,140,248,0.15);">&#128100;</div>
+          <div class="menu-label">Personal Profile<div class="menu-desc">Your info &amp; preferences</div></div>
+          <span class="menu-chevron">&#8250;</span>
+        </button>
+        <button class="menu-item" onclick="openSubPage('settings')">
+          <div class="menu-icon" style="background:rgba(148,163,184,0.15);">&#9881;</div>
+          <div class="menu-label">Settings<div class="menu-desc">Password, currency &amp; data</div></div>
+          <span class="menu-chevron">&#8250;</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Packing List Sub-page -->
+    <div class="tab-content" id="tab-packing">
+      <button class="back-btn" onclick="closeSubPage()">&#8249; Menu</button>
+      <div class="section-title">Packing List</div>
+
+      <div class="card">
+        <div class="add-packing-row">
+          <input class="form-input" id="packing-item-input" placeholder="Add item...">
+          <select class="form-input" id="packing-category-select" style="width:auto;min-width:120px;">
+            <option value="essentials">Essentials</option>
+            <option value="clothing">Clothing</option>
+            <option value="ski-gear">Ski Gear</option>
+            <option value="toiletries">Toiletries</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <select class="form-input" id="packing-assignee-select" style="flex:1;">
+            <option value="">Everyone</option>
+          </select>
+          <button class="btn btn-primary" onclick="addPackingItem()">Add</button>
+        </div>
+      </div>
+
+      <div id="packing-list-display"></div>
+    </div>
+
+    <!-- Profile Sub-page -->
+    <div class="tab-content" id="tab-profile">
+      <button class="back-btn" onclick="closeSubPage()">&#8249; Menu</button>
+      <div class="section-title">Personal Profile</div>
+
+      <div class="card" style="text-align:center;">
+        <div class="profile-avatar-large" id="profile-avatar">?</div>
+        <div class="form-group">
+          <label>Select Your Name</label>
+          <select class="form-input" id="profile-member-select" onchange="selectProfileMember()">
+            <option value="">-- Choose your name --</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="profile-stats" style="display:none;">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px">Your Stats</div>
+          <div id="profile-stats-display"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Sub-page -->
     <div class="tab-content" id="tab-settings">
+      <button class="back-btn" onclick="closeSubPage()">&#8249; Menu</button>
       <div class="section-title">Settings</div>
 
       <div class="settings-section">
@@ -684,8 +895,8 @@ textarea.form-input { resize: vertical; min-height: 60px; }
     <button onclick="switchTab('schedule', this)">
       <span class="tab-icon">&#128197;</span>Schedule
     </button>
-    <button onclick="switchTab('settings', this)">
-      <span class="tab-icon">&#9881;</span>Settings
+    <button onclick="switchTab('menu', this)">
+      <span class="tab-icon">&#9776;</span>Menu
     </button>
   </nav>
 </div>
@@ -826,6 +1037,8 @@ function getDefaultData() {
     members: [],
     expenses: [],
     activities: [],
+    packingItems: [],
+    profileMember: '',
     currency: 'EUR'
   };
 }
@@ -922,6 +1135,11 @@ function init() {
     if (e.key === 'Enter') attemptLogin();
   });
 
+  // Allow enter key on packing input
+  document.getElementById('packing-item-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addPackingItem();
+  });
+
   // Close modals on overlay click
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', e => {
@@ -931,12 +1149,30 @@ function init() {
 }
 
 // ── Tabs ──
+let currentSubPage = null;
+
 function switchTab(tab, btn) {
+  currentSubPage = null;
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
   btn.classList.add('active');
   renderAll();
+}
+
+function openSubPage(page) {
+  currentSubPage = page;
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + page).classList.add('active');
+  if (page === 'packing') renderPackingList();
+  if (page === 'profile') renderProfile();
+  if (page === 'settings') document.getElementById('currency-select').value = data.currency;
+}
+
+function closeSubPage() {
+  currentSubPage = null;
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-menu').classList.add('active');
 }
 
 // ── Modals ──
@@ -1266,6 +1502,154 @@ function renderSchedule() {
   }).join('');
 }
 
+// ── Packing List ──
+const PACKING_CATEGORIES = {
+  essentials: { label: 'Essentials', icon: '&#10029;' },
+  clothing: { label: 'Clothing', icon: '&#129507;' },
+  'ski-gear': { label: 'Ski Gear', icon: '&#9968;' },
+  toiletries: { label: 'Toiletries', icon: '&#129532;' },
+  other: { label: 'Other', icon: '&#128230;' }
+};
+
+function addPackingItem() {
+  const input = document.getElementById('packing-item-input');
+  const name = input.value.trim();
+  if (!name) return;
+
+  const category = document.getElementById('packing-category-select').value;
+  const assignee = document.getElementById('packing-assignee-select').value;
+
+  data.packingItems.push({
+    id: Date.now().toString(),
+    name,
+    category,
+    assignee,
+    checked: false
+  });
+
+  input.value = '';
+  save();
+  renderPackingList();
+}
+
+function togglePackingItem(id) {
+  const item = data.packingItems.find(i => i.id === id);
+  if (item) {
+    item.checked = !item.checked;
+    save();
+    renderPackingList();
+  }
+}
+
+function removePackingItem(id) {
+  data.packingItems = data.packingItems.filter(i => i.id !== id);
+  save();
+  renderPackingList();
+}
+
+function renderPackingList() {
+  // Populate assignee dropdown
+  const assigneeSelect = document.getElementById('packing-assignee-select');
+  const currentVal = assigneeSelect.value;
+  assigneeSelect.innerHTML = '<option value="">Everyone</option>' +
+    data.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  assigneeSelect.value = currentVal;
+
+  const el = document.getElementById('packing-list-display');
+  if (!data.packingItems || data.packingItems.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">&#127890;</div><div class="msg">No items yet. Add things to pack!</div></div>';
+    return;
+  }
+
+  // Group by category
+  const groups = {};
+  data.packingItems.forEach(item => {
+    if (!groups[item.category]) groups[item.category] = [];
+    groups[item.category].push(item);
+  });
+
+  const order = ['essentials', 'clothing', 'ski-gear', 'toiletries', 'other'];
+  el.innerHTML = order.filter(cat => groups[cat]).map(cat => {
+    const catInfo = PACKING_CATEGORIES[cat];
+    const items = groups[cat];
+    const checkedCount = items.filter(i => i.checked).length;
+    return `
+      <div class="card packing-category">
+        <div class="card-header">
+          <span class="card-title">${catInfo.icon} ${catInfo.label}</span>
+          <span class="badge badge-accent">${checkedCount}/${items.length}</span>
+        </div>
+        ${items.map(item => {
+          const member = item.assignee ? data.members.find(m => m.id === item.assignee) : null;
+          return `
+            <div class="packing-item ${item.checked ? 'checked' : ''}">
+              <input type="checkbox" ${item.checked ? 'checked' : ''} onchange="togglePackingItem('${item.id}')">
+              <span class="packing-text">${escapeHTML(item.name)}</span>
+              ${member ? `<span class="packing-assignee">${member.name}</span>` : ''}
+              <button class="delete-btn" onclick="removePackingItem('${item.id}')">&times;</button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Profile ──
+function renderProfile() {
+  const select = document.getElementById('profile-member-select');
+  const currentVal = data.profileMember || '';
+  select.innerHTML = '<option value="">-- Choose your name --</option>' +
+    data.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  select.value = currentVal;
+
+  const avatar = document.getElementById('profile-avatar');
+  const statsContainer = document.getElementById('profile-stats');
+
+  if (!currentVal || !data.members.find(m => m.id === currentVal)) {
+    avatar.textContent = '?';
+    avatar.style.background = 'linear-gradient(135deg, var(--accent), var(--accent2))';
+    statsContainer.style.display = 'none';
+    return;
+  }
+
+  const member = data.members.find(m => m.id === currentVal);
+  avatar.textContent = member.name.charAt(0).toUpperCase();
+  avatar.style.background = member.color;
+  statsContainer.style.display = 'block';
+
+  const sym = CURRENCY_SYMBOLS[data.currency] || '\u20AC';
+
+  // Calculate personal stats
+  const paidExpenses = data.expenses.filter(e => e.payer === member.id);
+  const totalPaid = paidExpenses.reduce((s, e) => s + e.amount, 0);
+
+  let totalOwed = 0;
+  data.expenses.forEach(e => {
+    if (e.splitBetween.includes(member.id)) {
+      totalOwed += e.amount / e.splitBetween.length;
+    }
+  });
+
+  const balance = totalPaid - totalOwed;
+  const packingTotal = data.packingItems ? data.packingItems.filter(i => i.assignee === member.id).length : 0;
+  const packingDone = data.packingItems ? data.packingItems.filter(i => i.assignee === member.id && i.checked).length : 0;
+
+  document.getElementById('profile-stats-display').innerHTML = `
+    <div class="info-row"><span class="info-label">Total Paid</span><span class="info-value">${sym}${totalPaid.toFixed(2)}</span></div>
+    <div class="info-row"><span class="info-label">Your Share</span><span class="info-value">${sym}${totalOwed.toFixed(2)}</span></div>
+    <div class="info-row"><span class="info-label">Balance</span><span class="info-value" style="color:${balance > 0.01 ? 'var(--success)' : balance < -0.01 ? 'var(--danger)' : 'var(--text)'}">${balance > 0 ? '+' : ''}${sym}${balance.toFixed(2)}</span></div>
+    <div class="info-row"><span class="info-label">Expenses Filed</span><span class="info-value">${paidExpenses.length}</span></div>
+    <div class="info-row"><span class="info-label">Packing Progress</span><span class="info-value">${packingDone}/${packingTotal} items</span></div>
+  `;
+}
+
+function selectProfileMember() {
+  data.profileMember = document.getElementById('profile-member-select').value;
+  save();
+  renderProfile();
+}
+
 // ── Settings ──
 function changeCurrency() {
   data.currency = document.getElementById('currency-select').value;
@@ -1323,7 +1707,11 @@ function renderAll() {
   renderSummary();
   renderExpenses();
   renderSchedule();
-  document.getElementById('currency-select').value = data.currency;
+  if (currentSubPage === 'packing') renderPackingList();
+  if (currentSubPage === 'profile') renderProfile();
+  if (currentSubPage === 'settings' || !currentSubPage) {
+    document.getElementById('currency-select').value = data.currency;
+  }
 }
 
 // ── Boot ──
