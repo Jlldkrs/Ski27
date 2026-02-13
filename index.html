@@ -1154,6 +1154,30 @@ function attemptLogin() {
   }
 
   if (pw === cachedPassword) {
+    // If not currently admin, check if stored admin is still active
+    if (!isAdmin) {
+      adminRef.once('value').then(snap => {
+        const storedAdminUid = snap.val();
+        if (!storedAdminUid) {
+          // No admin set — claim it
+          const user = auth.currentUser;
+          if (user) adminRef.set(user.uid);
+          isAdmin = true;
+          updateAdminUI();
+        } else {
+          // Check if stored admin is still authorized
+          authorizedRef.child(storedAdminUid).once('value').then(authSnap => {
+            if (!authSnap.val()) {
+              // Old admin is no longer active — claim admin
+              const user = auth.currentUser;
+              if (user) adminRef.set(user.uid);
+              isAdmin = true;
+              updateAdminUI();
+            }
+          });
+        }
+      });
+    }
     authorizeCurrentUser();
     sessionStorage.setItem(SESSION_KEY, '1');
     showApp();
@@ -1209,41 +1233,55 @@ function showApp() {
 }
 
 function init() {
-  // Sign in anonymously first, then proceed
-  auth.signInAnonymously()
-    .then(() => {
-      // Fetch password and admin UID from Firebase
-      return Promise.all([passwordRef.once('value'), adminRef.once('value')]);
-    })
-    .then(([pwSnapshot, adminSnapshot]) => {
-      cachedPassword = pwSnapshot.val();
-      const adminUid = adminSnapshot.val();
-      const user = auth.currentUser;
+  // Wait for existing auth state before signing in
+  const unsubscribe = auth.onAuthStateChanged(user => {
+    unsubscribe(); // only handle the first callback
 
-      // If no admin exists yet and there's a valid session, claim admin
-      if (!adminUid && user && cachedPassword && sessionStorage.getItem(SESSION_KEY)) {
-        adminRef.set(user.uid);
-        isAdmin = true;
-      } else {
-        isAdmin = !!(user && adminUid && user.uid === adminUid);
-      }
-      updateAdminUI();
+    const afterAuth = () => {
+      return Promise.all([passwordRef.once('value'), adminRef.once('value')])
+        .then(([pwSnapshot, adminSnapshot]) => {
+          cachedPassword = pwSnapshot.val();
+          const adminUid = adminSnapshot.val();
+          const currentUser = auth.currentUser;
 
-      const hint = document.getElementById('login-hint');
-      if (!cachedPassword) {
-        hint.textContent = 'First visit? Enter a password to create the group.';
-      }
+          // If no admin exists yet and there's a valid session, claim admin
+          if (!adminUid && currentUser && cachedPassword && sessionStorage.getItem(SESSION_KEY)) {
+            adminRef.set(currentUser.uid);
+            isAdmin = true;
+          } else {
+            isAdmin = !!(currentUser && adminUid && currentUser.uid === adminUid);
+          }
+          updateAdminUI();
 
-      // Check for existing session and re-authorize if needed
-      if (sessionStorage.getItem(SESSION_KEY) && cachedPassword) {
-        authorizeCurrentUser();
-        showApp();
-      }
-    })
-    .catch(err => {
-      console.error('Auth failed:', err);
-      document.getElementById('login-error').textContent = 'Connection error. Please refresh.';
-    });
+          const hint = document.getElementById('login-hint');
+          if (!cachedPassword) {
+            hint.textContent = 'First visit? Enter a password to create the group.';
+          }
+
+          // Check for existing session and re-authorize if needed
+          if (sessionStorage.getItem(SESSION_KEY) && cachedPassword) {
+            authorizeCurrentUser();
+            showApp();
+          }
+        });
+    };
+
+    if (user) {
+      // Already signed in — reuse existing session (preserves UID)
+      afterAuth().catch(err => {
+        console.error('Auth failed:', err);
+        document.getElementById('login-error').textContent = 'Connection error. Please refresh.';
+      });
+    } else {
+      // No existing session — sign in anonymously
+      auth.signInAnonymously()
+        .then(() => afterAuth())
+        .catch(err => {
+          console.error('Auth failed:', err);
+          document.getElementById('login-error').textContent = 'Connection error. Please refresh.';
+        });
+    }
+  });
 
   // Also listen for password changes in real time
   passwordRef.on('value', snapshot => {
