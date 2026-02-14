@@ -1025,7 +1025,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 <div class="modal-overlay" id="activity-modal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Add Activity</div>
+    <div class="modal-title" id="activity-modal-title">Add Activity</div>
     <div class="form-group">
       <label>Date</label>
       <input class="form-input" type="date" id="activity-date">
@@ -1042,7 +1042,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
       <label>Description (optional)</label>
       <textarea class="form-input" id="activity-desc" placeholder="Details..."></textarea>
     </div>
-    <button class="btn btn-primary btn-block" onclick="addActivity()">Add Activity</button>
+    <button class="btn btn-primary btn-block" id="activity-modal-btn" onclick="addActivity()">Add Activity</button>
     <button class="btn btn-block" style="background:var(--surface2);color:var(--text);margin-top:8px" onclick="closeModal('activity-modal')">Cancel</button>
   </div>
 </div>
@@ -1102,6 +1102,7 @@ let firebaseReady = false;
 // ── Persistence (Firebase) ──
 let isSaving = false;
 let editingExpenseId = null;
+let editingActivityId = null;
 
 function save() {
   isSaving = true;
@@ -1433,7 +1434,7 @@ function closeSubPage() {
 function openModal(id) {
   document.getElementById(id).classList.add('active');
   if (id === 'expense-modal') { editingExpenseId = null; populateExpenseForm(); }
-  if (id === 'activity-modal') prefillActivityDate();
+  if (id === 'activity-modal') { editingActivityId = null; prefillActivityDate(); }
 }
 
 function closeModal(id) {
@@ -1715,14 +1716,24 @@ function renderBalances() {
 }
 
 // ── Schedule ──
-function prefillActivityDate() {
-  const t = data.trip;
-  if (t.start && !document.getElementById('activity-date').value) {
-    document.getElementById('activity-date').value = t.start;
+function prefillActivityDate(activity) {
+  const isEdit = !!activity;
+
+  document.getElementById('activity-modal-title').textContent = isEdit ? 'Edit Activity' : 'Add Activity';
+  document.getElementById('activity-modal-btn').textContent = isEdit ? 'Save Changes' : 'Add Activity';
+
+  if (isEdit) {
+    document.getElementById('activity-date').value = activity.date;
+    document.getElementById('activity-time').value = activity.time || '';
+    document.getElementById('activity-name').value = activity.name;
+    document.getElementById('activity-desc').value = activity.desc || '';
+  } else {
+    const t = data.trip;
+    document.getElementById('activity-date').value = t.start || '';
+    document.getElementById('activity-name').value = '';
+    document.getElementById('activity-desc').value = '';
+    document.getElementById('activity-time').value = '';
   }
-  document.getElementById('activity-name').value = '';
-  document.getElementById('activity-desc').value = '';
-  document.getElementById('activity-time').value = '';
 }
 
 function addActivity() {
@@ -1734,10 +1745,21 @@ function addActivity() {
   if (!date) { alert('Please select a date'); return; }
   if (!name) { alert('Please enter an activity name'); return; }
 
-  data.activities.push({
-    id: Date.now().toString(),
-    date, time, name, desc
-  });
+  if (editingActivityId) {
+    const activity = data.activities.find(a => a.id === editingActivityId);
+    if (activity) {
+      activity.date = date;
+      activity.time = time;
+      activity.name = name;
+      activity.desc = desc;
+    }
+    editingActivityId = null;
+  } else {
+    data.activities.push({
+      id: Date.now().toString(),
+      date, time, name, desc
+    });
+  }
 
   data.activities.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
@@ -1747,6 +1769,14 @@ function addActivity() {
   save();
   closeModal('activity-modal');
   renderAll();
+}
+
+function editActivity(id) {
+  const activity = data.activities.find(a => a.id === id);
+  if (!activity) return;
+  editingActivityId = id;
+  document.getElementById('activity-modal').classList.add('active');
+  prefillActivityDate(activity);
 }
 
 function removeActivity(id) {
@@ -1783,7 +1813,8 @@ function renderSchedule() {
               <div class="name">${escapeHTML(a.name)}</div>
               ${a.desc ? `<div class="desc">${escapeHTML(a.desc)}</div>` : ''}
             </div>
-            <button class="delete-btn" onclick="removeActivity('${a.id}')">&times;</button>
+            <button class="delete-btn" onclick="editActivity('${a.id}')" title="Edit">&#9998;</button>
+            <button class="delete-btn" onclick="removeActivity('${a.id}')" title="Delete">&times;</button>
           </div>
         `).join('')}
       </div>
