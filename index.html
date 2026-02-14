@@ -888,7 +888,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         <div class="card">
           <div class="form-group">
             <label>Set or Change Group Password</label>
-            <input class="form-input" type="text" id="new-password" placeholder="New group password for members">
+            <input class="form-input" type="password" id="new-password" placeholder="New group password for members">
           </div>
           <button class="btn btn-primary btn-block" onclick="changePassword()">Update Group Password</button>
         </div>
@@ -1232,6 +1232,7 @@ function logout() {
   document.getElementById('login-screen').style.display = '';
   document.getElementById('password-input').value = '';
   document.getElementById('login-error').textContent = '';
+  firebase.auth().signOut();
 }
 
 async function changePassword() {
