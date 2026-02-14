@@ -1301,8 +1301,11 @@ function init() {
 
   // Sign in anonymously first, then read DB
   withTimeout(auth.signInAnonymously(), 10000)
+    .then(cred => {
+      console.log('Auth succeeded, uid:', cred.user.uid);
+    })
     .catch(err => {
-      console.warn('Anonymous auth failed:', err.code || err.message);
+      console.error('Anonymous auth failed:', err.code, err.message);
       return null; // Continue anyway, let DB rules decide
     })
     .then(() => withTimeout(Promise.all([
@@ -1369,7 +1372,7 @@ function init() {
       const loginErr = document.getElementById('login-error');
       loginErr.style.display = '';
       if (err.code === 'PERMISSION_DENIED' || (err.message && err.message.includes('Permission denied'))) {
-        loginErr.textContent = 'Database permission denied. Please enable Anonymous Authentication in Firebase Console (Authentication → Sign-in method → Anonymous → Enable), then refresh.';
+        loginErr.textContent = 'Database permission denied. In Firebase Console, go to Realtime Database → Rules and set: { "rules": { ".read": "auth != null", ".write": "auth != null" } }, then refresh.';
       } else {
         loginErr.textContent = 'Connection error: ' + (err.code || err.message || err) + '. Please refresh the page.';
       }
