@@ -678,6 +678,43 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 .toast { background: var(--surface2); color: var(--text); padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.3); opacity: 0; transform: translateY(-10px); transition: opacity 0.3s, transform 0.3s; }
 .toast.show { opacity: 1; transform: translateY(0); }
 
+/* ── Light Theme ── */
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface2: #e2e8f0;
+  --accent: #0284c7;
+  --accent2: #6366f1;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --text: #0f172a;
+  --text2: #64748b;
+  --shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+
+[data-theme="light"] #login-screen {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bfdbfe 50%, #e0f2fe 100%);
+}
+
+[data-theme="light"] #admin-setup-screen > div {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bfdbfe 50%, #e0f2fe 100%) !important;
+}
+
+[data-theme="light"] #login-loading {
+  color: rgba(0,0,0,0.5) !important;
+}
+
+[data-theme="light"] .btn-primary { color: white; }
+[data-theme="light"] .btn-success { color: white; }
+
+[data-theme="light"] .modal-overlay { background: rgba(0,0,0,0.3); }
+
+[data-theme="light"] .member-avatar { color: white; }
+[data-theme="light"] .profile-avatar-large { color: white; }
+
+.theme-toggle { font-size: 18px; }
+
 /* Responsive tweaks */
 @media (min-width: 600px) {
   .content { padding: 24px; padding-bottom: 80px; }
@@ -725,6 +762,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   <header class="app-header">
     <h1>&#9968; Ski27</h1>
     <div class="header-actions">
+      <button class="icon-btn theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle light/dark mode">&#9788;</button>
       <button class="icon-btn" onclick="exportData()" title="Export data">&#128190;</button>
       <button class="icon-btn" onclick="logout()" title="Logout">&#10151;</button>
     </div>
@@ -2071,6 +2109,23 @@ function renderAll() {
   }
   updateAdminUI();
 }
+
+// ── Theme Toggle ──
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.innerHTML = theme === 'light' ? '&#9789;' : '&#9788;';
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('ski27-theme', next);
+  applyTheme(next);
+}
+
+// Apply saved theme immediately
+applyTheme(localStorage.getItem('ski27-theme') || 'dark');
 
 // ── Boot ──
 init();
