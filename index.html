@@ -1290,38 +1290,24 @@ function showApp() {
   startRealtimeSync();
 }
 
-function ensureAuth() {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Authentication timed out. Check your internet connection.'));
-    }, 10000);
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      unsubscribe();
-      if (user) {
-        clearTimeout(timeout);
-        resolve(user);
-      } else {
-        // Sign in anonymously — must complete before any DB reads
-        auth.signInAnonymously()
-          .then(cred => { clearTimeout(timeout); resolve(cred.user); })
-          .catch(err => {
-            clearTimeout(timeout);
-            console.warn('Anonymous auth failed, trying without auth:', err.code);
-            // If anonymous auth is not enabled, resolve anyway and let DB rules decide
-            resolve(null);
-          });
-      }
-    });
-  });
-}
-
 function init() {
-  // 1. Authenticate first, then read database
-  ensureAuth()
-    .then(() => Promise.all([
-      adminPasswordRef.once('value'),
-      passwordRef.once('value')
-    ]))
+  // Wrap DB reads with a timeout so they don't hang forever
+  function withTimeout(promise, ms) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Database read timed out')), ms))
+    ]);
+  }
+
+  // Try anonymous auth in background (non-blocking), then read DB directly
+  auth.signInAnonymously().catch(err => {
+    console.warn('Anonymous auth not available:', err.code);
+  });
+
+  withTimeout(Promise.all([
+    adminPasswordRef.once('value'),
+    passwordRef.once('value')
+  ]), 10000)
     .then(([adminSnapshot, pwSnapshot]) => {
       const isHash = v => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v);
       let adminVal = adminSnapshot.val();
