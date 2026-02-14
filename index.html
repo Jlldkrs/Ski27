@@ -1300,18 +1300,14 @@ function init() {
   }
 
   // Sign in anonymously first, then read DB
-  withTimeout(auth.signInAnonymously(), 10000)
+  withTimeout(auth.signInAnonymously(), 15000)
     .then(cred => {
       console.log('Auth succeeded, uid:', cred.user.uid);
+      return withTimeout(Promise.all([
+        adminPasswordRef.once('value'),
+        passwordRef.once('value')
+      ]), 10000);
     })
-    .catch(err => {
-      console.error('Anonymous auth failed:', err.code, err.message);
-      return null; // Continue anyway, let DB rules decide
-    })
-    .then(() => withTimeout(Promise.all([
-      adminPasswordRef.once('value'),
-      passwordRef.once('value')
-    ]), 10000))
     .then(([adminSnapshot, pwSnapshot]) => {
       const isHash = v => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v);
       let adminVal = adminSnapshot.val();
@@ -1371,8 +1367,12 @@ function init() {
       document.getElementById('login-loading').style.display = 'none';
       const loginErr = document.getElementById('login-error');
       loginErr.style.display = '';
-      if (err.code === 'PERMISSION_DENIED' || (err.message && err.message.includes('Permission denied'))) {
-        loginErr.textContent = 'Database permission denied. In Firebase Console, go to Realtime Database → Rules and set: { "rules": { ".read": "auth != null", ".write": "auth != null" } }, then refresh.';
+      if (err.code === 'auth/operation-not-allowed') {
+        loginErr.textContent = 'Anonymous Authentication is not enabled. In Firebase Console → Authentication → Sign-in method → Anonymous → Enable, then refresh.';
+      } else if (err.code === 'PERMISSION_DENIED' || (err.message && err.message.includes('Permission denied'))) {
+        loginErr.textContent = 'Database permission denied. In Firebase Console → Realtime Database → Rules, set: { "rules": { ".read": "auth != null", ".write": "auth != null" } }, then refresh.';
+      } else if (err.message && err.message.includes('timed out')) {
+        loginErr.textContent = 'Connection timed out. Check your internet connection and that your Firebase project exists, then refresh.';
       } else {
         loginErr.textContent = 'Connection error: ' + (err.code || err.message || err) + '. Please refresh the page.';
       }
