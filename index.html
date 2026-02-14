@@ -1299,15 +1299,16 @@ function init() {
     ]);
   }
 
-  // Try anonymous auth in background (non-blocking), then read DB directly
-  auth.signInAnonymously().catch(err => {
-    console.warn('Anonymous auth not available:', err.code);
-  });
-
-  withTimeout(Promise.all([
-    adminPasswordRef.once('value'),
-    passwordRef.once('value')
-  ]), 10000)
+  // Sign in anonymously first, then read DB
+  withTimeout(auth.signInAnonymously(), 10000)
+    .catch(err => {
+      console.warn('Anonymous auth failed:', err.code || err.message);
+      return null; // Continue anyway, let DB rules decide
+    })
+    .then(() => withTimeout(Promise.all([
+      adminPasswordRef.once('value'),
+      passwordRef.once('value')
+    ]), 10000))
     .then(([adminSnapshot, pwSnapshot]) => {
       const isHash = v => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v);
       let adminVal = adminSnapshot.val();
