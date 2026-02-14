@@ -760,7 +760,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 <!-- ── Main App ── -->
 <div id="app">
   <header class="app-header">
-    <h1>&#9968; Ski27</h1>
+    <h1 style="cursor:pointer" onclick="switchTab('overview', document.querySelector('.tab-bar button'))">&#9968; Ski27</h1>
     <div class="header-actions">
       <button class="icon-btn theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle light/dark mode">&#9788;</button>
       <button class="icon-btn" onclick="exportData()" title="Export data">&#128190;</button>
