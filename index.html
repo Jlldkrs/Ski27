@@ -988,7 +988,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 <div class="modal-overlay" id="expense-modal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Add Expense</div>
+    <div class="modal-title" id="expense-modal-title">Add Expense</div>
     <div class="form-group">
       <label>Description</label>
       <input class="form-input" id="expense-desc" placeholder="e.g. Ski passes">
@@ -1016,7 +1016,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
       <label>Split Between</label>
       <div class="check-list" id="expense-split-list"></div>
     </div>
-    <button class="btn btn-primary btn-block" onclick="addExpense()">Add Expense</button>
+    <button class="btn btn-primary btn-block" id="expense-modal-btn" onclick="addExpense()">Add Expense</button>
     <button class="btn btn-block" style="background:var(--surface2);color:var(--text);margin-top:8px" onclick="closeModal('expense-modal')">Cancel</button>
   </div>
 </div>
@@ -1101,6 +1101,7 @@ let firebaseReady = false;
 
 // ── Persistence (Firebase) ──
 let isSaving = false;
+let editingExpenseId = null;
 
 function save() {
   isSaving = true;
@@ -1430,7 +1431,7 @@ function closeSubPage() {
 // ── Modals ──
 function openModal(id) {
   document.getElementById(id).classList.add('active');
-  if (id === 'expense-modal') populateExpenseForm();
+  if (id === 'expense-modal') { editingExpenseId = null; populateExpenseForm(); }
   if (id === 'activity-modal') prefillActivityDate();
 }
 
@@ -1531,17 +1532,31 @@ function renderSummary() {
 }
 
 // ── Expenses ──
-function populateExpenseForm() {
+function populateExpenseForm(expense) {
   const payer = document.getElementById('expense-payer');
   const splitList = document.getElementById('expense-split-list');
+  const isEdit = !!expense;
+
+  document.getElementById('expense-modal-title').textContent = isEdit ? 'Edit Expense' : 'Add Expense';
+  document.getElementById('expense-modal-btn').textContent = isEdit ? 'Save Changes' : 'Add Expense';
 
   payer.innerHTML = data.members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-  splitList.innerHTML = data.members.map(m => `
-    <label><input type="checkbox" value="${m.id}" checked> ${m.name}</label>
-  `).join('');
 
-  document.getElementById('expense-desc').value = '';
-  document.getElementById('expense-amount').value = '';
+  if (isEdit) {
+    document.getElementById('expense-desc').value = expense.desc;
+    document.getElementById('expense-amount').value = expense.amount;
+    document.getElementById('expense-category').value = expense.category;
+    payer.value = expense.payer;
+    splitList.innerHTML = data.members.map(m => `
+      <label><input type="checkbox" value="${m.id}" ${expense.splitBetween.includes(m.id) ? 'checked' : ''}> ${m.name}</label>
+    `).join('');
+  } else {
+    document.getElementById('expense-desc').value = '';
+    document.getElementById('expense-amount').value = '';
+    splitList.innerHTML = data.members.map(m => `
+      <label><input type="checkbox" value="${m.id}" checked> ${m.name}</label>
+    `).join('');
+  }
 }
 
 function addExpense() {
@@ -1557,15 +1572,35 @@ function addExpense() {
   if (!payer) { alert('Please select who paid'); return; }
   if (splitBetween.length === 0) { alert('Please select at least one person to split with'); return; }
 
-  data.expenses.push({
-    id: Date.now().toString(),
-    desc, amount, category, payer, splitBetween,
-    date: new Date().toISOString()
-  });
+  if (editingExpenseId) {
+    const expense = data.expenses.find(e => e.id === editingExpenseId);
+    if (expense) {
+      expense.desc = desc;
+      expense.amount = amount;
+      expense.category = category;
+      expense.payer = payer;
+      expense.splitBetween = splitBetween;
+    }
+    editingExpenseId = null;
+  } else {
+    data.expenses.push({
+      id: Date.now().toString(),
+      desc, amount, category, payer, splitBetween,
+      date: new Date().toISOString()
+    });
+  }
 
   save();
   closeModal('expense-modal');
   renderAll();
+}
+
+function editExpense(id) {
+  const expense = data.expenses.find(e => e.id === id);
+  if (!expense) return;
+  editingExpenseId = id;
+  document.getElementById('expense-modal').classList.add('active');
+  populateExpenseForm(expense);
 }
 
 function removeExpense(id) {
@@ -1594,7 +1629,8 @@ function renderExpenses() {
             <div class="meta">Paid by ${payer ? payer.name : 'Unknown'} &middot; Split ${e.splitBetween.length} ways</div>
           </div>
           <div class="expense-amount">${sym}${e.amount.toFixed(2)}</div>
-          <button class="delete-btn" onclick="removeExpense('${e.id}')" style="margin-left:8px">&times;</button>
+          <button class="delete-btn" onclick="editExpense('${e.id}')" style="margin-left:8px" title="Edit">&#9998;</button>
+          <button class="delete-btn" onclick="removeExpense('${e.id}')" style="margin-left:4px" title="Delete">&times;</button>
         </div>
       `;
     }).join('') + '</div>';
