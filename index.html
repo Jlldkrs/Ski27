@@ -673,6 +673,11 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   background: linear-gradient(135deg, var(--accent), var(--accent2));
 }
 
+/* Toast */
+.toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+.toast { background: var(--surface2); color: var(--text); padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.3); opacity: 0; transform: translateY(-10px); transition: opacity 0.3s, transform 0.3s; }
+.toast.show { opacity: 1; transform: translateY(0); }
+
 /* Responsive tweaks */
 @media (min-width: 600px) {
   .content { padding: 24px; padding-bottom: 80px; }
@@ -683,6 +688,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
+<div class="toast-container" id="toast-container"></div>
 
 <!-- ── Login Screen ── -->
 <div id="login-screen">
@@ -1252,7 +1258,7 @@ async function changePassword() {
   if (!confirm('This will log out all regular users. Continue?')) return;
   setPassword(pw);
   document.getElementById('new-password').value = '';
-  alert('Group password updated! Members will need to re-enter the new password.');
+  showToast('Group password updated!');
 }
 
 async function changeAdminPassword() {
@@ -1279,7 +1285,7 @@ async function changeAdminPassword() {
   document.getElementById('current-admin-password').value = '';
   document.getElementById('new-admin-password').value = '';
   document.getElementById('confirm-admin-password').value = '';
-  alert('Admin password updated successfully!');
+  showToast('Admin password updated!');
 }
 
 function updateAdminUI() {
@@ -1453,6 +1459,7 @@ function addMember() {
   document.getElementById('member-name').value = '';
   save();
   closeModal('member-modal');
+  showToast('Member added!');
   renderAll();
 }
 
@@ -1460,6 +1467,7 @@ function removeMember(id) {
   if (!confirm('Remove this member? Their expenses will remain.')) return;
   data.members = data.members.filter(m => m.id !== id);
   save();
+  showToast('Member removed');
   renderAll();
 }
 
@@ -1487,6 +1495,7 @@ function saveTripDetails() {
   data.trip.notes = document.getElementById('trip-notes').value.trim();
   save();
   closeModal('trip-modal');
+  showToast('Trip details saved!');
   renderAll();
 }
 
@@ -1574,6 +1583,7 @@ function addExpense() {
   if (!payer) { alert('Please select who paid'); return; }
   if (splitBetween.length === 0) { alert('Please select at least one person to split with'); return; }
 
+  const isEdit = !!editingExpenseId;
   if (editingExpenseId) {
     const expense = data.expenses.find(e => e.id === editingExpenseId);
     if (expense) {
@@ -1594,6 +1604,7 @@ function addExpense() {
 
   save();
   closeModal('expense-modal');
+  showToast(isEdit ? 'Expense updated!' : 'Expense added!');
   renderAll();
 }
 
@@ -1609,6 +1620,7 @@ function removeExpense(id) {
   if (!confirm('Delete this expense?')) return;
   data.expenses = data.expenses.filter(e => e.id !== id);
   save();
+  showToast('Expense deleted');
   renderAll();
 }
 
@@ -1745,6 +1757,7 @@ function addActivity() {
   if (!date) { alert('Please select a date'); return; }
   if (!name) { alert('Please enter an activity name'); return; }
 
+  const isEdit = !!editingActivityId;
   if (editingActivityId) {
     const activity = data.activities.find(a => a.id === editingActivityId);
     if (activity) {
@@ -1768,6 +1781,7 @@ function addActivity() {
 
   save();
   closeModal('activity-modal');
+  showToast(isEdit ? 'Activity updated!' : 'Activity added!');
   renderAll();
 }
 
@@ -1783,6 +1797,7 @@ function removeActivity(id) {
   if (!confirm('Delete this activity?')) return;
   data.activities = data.activities.filter(a => a.id !== id);
   save();
+  showToast('Activity deleted');
   renderAll();
 }
 
@@ -1849,6 +1864,7 @@ function addPackingItem() {
 
   input.value = '';
   save();
+  showToast('Item added!');
   renderPackingList();
 }
 
@@ -1864,6 +1880,7 @@ function togglePackingItem(id) {
 function removePackingItem(id) {
   data.packingItems = data.packingItems.filter(i => i.id !== id);
   save();
+  showToast('Item removed');
   renderPackingList();
 }
 
@@ -2026,6 +2043,19 @@ function escapeHTML(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function showToast(message) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 2000);
 }
 
 function renderAll() {
